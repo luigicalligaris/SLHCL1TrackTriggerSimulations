@@ -48,10 +48,10 @@ def drawer_book(options):
     histos[hname] = TEfficiency(hname, "; p_{T} [GeV]; %s" % ytitle, 100, 0., 10.)
 
     hname = prefix + "eta"
-    histos[hname] = TEfficiency(hname, "; #eta; %s" % ytitle,        120, -3.0, 3.0)
+    histos[hname] = TEfficiency(hname, "; #eta; %s" % ytitle,        100, 0., 0.74)
 
     hname = prefix + "phi"
-    histos[hname] = TEfficiency(hname, "; #phi; %s" % ytitle,        128, -3.2, 3.2)
+    histos[hname] = TEfficiency(hname, "; #phi; %s" % ytitle,        100, 3.14/4., 3.14/2.)
 
     hname = prefix + "vz"
     histos[hname] = TEfficiency(hname, "; v_{z} [cm]; %s" % ytitle,  120, -30, 30)
@@ -178,6 +178,10 @@ def drawer_project(tree, histos, options):
             #vy      = evt.trkParts_vy     [ipart]
             vz      = evt.trkParts_vz     [ipart]
             pdgId   = evt.trkParts_pdgId  [ipart]
+
+            #____ Including pT cut from option ____
+            if pt < options.ptmin:
+                continue
 
 	    #_______ Tklayout cuts ________
             q_over_Pt = charge/pt
