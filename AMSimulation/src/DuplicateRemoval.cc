@@ -7,11 +7,15 @@ using namespace slhcl1tt;
 #include <exception>
 
 
-///Just to sort by logic
+
 namespace{
 
-  bool sortForDuplicateRm(const TTTrack2& ltk, const TTTrack2& rtk){
+  bool sortByLogicPt(const TTTrack2& ltk, const TTTrack2& rtk){
     return (ltk.ndof() > rtk.ndof()) || (ltk.ndof() == rtk.ndof() && ltk.pt() > rtk.pt());
+  }
+
+  bool sortByChi2(const TTTrack2& ltk, const TTTrack2& rtk){
+    return (ltk.chi2()/(float)ltk.ndof()) < (rtk.chi2()/(float)rtk.ndof());
   }
 
 }
@@ -29,7 +33,8 @@ void DuplicateRemoval::CheckTracks(std::vector<TTTrack2>& full_am_track_list, in
   // If setted, duplicate removal is done
   else if(dupRm != -1 && dupRm < 7){
     ///Sort AM tracks by logic and pt (decreasing)
-    std::sort(full_am_track_list.begin(), full_am_track_list.end(), sortForDuplicateRm);
+    //std::sort(full_am_track_list.begin(), full_am_track_list.end(), sortByLogicPt);
+    std::sort(full_am_track_list.begin(), full_am_track_list.end(), sortByChi2);
 
   
     ///The duplicate removal itself
