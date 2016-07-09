@@ -121,6 +121,7 @@ int main(int argc, char **argv) {
 	("rmParDuplicate", po::bool_switch(&option.rmParDuplicate)->default_value(false), "Parameter-based duplicate removal switch")
 
 	//Only for alternative combination builder configuration
+        ("oldCB", po::bool_switch(&option.oldCB)->default_value(false), "Use the old combination builder")
 	("FiveOfSix", po::bool_switch(&option.FiveOfSix)->default_value(false), "Do all 5/6 permutations of 6/6 roads in addition")
 	("PDDS", po::bool_switch(&option.PDDS)->default_value(false), "Switch on pairwise Delta Delta S combination cleaning")
 	

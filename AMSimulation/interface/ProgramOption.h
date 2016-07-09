@@ -57,6 +57,7 @@ struct ProgramOption {
     int 	rmDuplicate;
     bool        rmParDuplicate;
 
+    bool        oldCB;
     bool	FiveOfSix;
     bool	PDDS;
 

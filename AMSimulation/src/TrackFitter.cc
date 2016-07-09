@@ -133,8 +133,11 @@ int TrackFitter::makeTracks(TString src, TString out) {
 	    
 	    //choose either the normal combination building or the 5/6 permutations per 6/6 road in addition and/or pairwise Delta Delta S cleaning (PDDS)
 	    std::vector<std::vector<unsigned> > combinations;
-            if(po_.FiveOfSix || po_.PDDS)	combinations = pairCombinationFactory_.combine(stubRefs, stubDeltaS, po_.FiveOfSix);
-	    else 				combinations = combinationFactory_.combine(stubRefs);			
+	    if (po_.oldCB) combinations = combinationFactory_.combine(stubRefs);
+            else if(po_.PDDS) combinations = pairCombinationFactory_.combine(stubRefs, stubDeltaS, po_.FiveOfSix);
+	    else combinations = combinationBuilderFactory_->combine(stubRefs);
+
+	    // std::cout << "combinations = " << combinations.size() << std::endl;
 
             for (unsigned icomb=0; icomb<combinations.size(); ++icomb)
                 assert(combinations.at(icomb).size() == reader.vr_stubRefs->at(iroad).size());
