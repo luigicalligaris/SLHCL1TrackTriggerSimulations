@@ -109,6 +109,7 @@ int main(int argc, char **argv) {
 
         // Only for track fitting
         ("maxChi2"      , po::value<float>(&option.maxChi2)->default_value(5.), "Specify maximum reduced chi-squared")
+	("CutPrincipals", po::bool_switch(&option.CutPrincipals)->default_value(false), "replace chi**2 cut with principals cut")
         ("minNdof"      , po::value<int>(&option.minNdof)->default_value(1), "Specify minimum degree of freedom")
         ("maxCombs"     , po::value<int>(&option.maxCombs)->default_value(999999999), "Specfiy max number of combinations per road")
         ("maxTracks"    , po::value<int>(&option.maxTracks)->default_value(999999999), "Specfiy max number of tracks per event")

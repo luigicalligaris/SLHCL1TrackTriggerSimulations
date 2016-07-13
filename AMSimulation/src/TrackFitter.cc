@@ -32,6 +32,28 @@ unsigned getHitBits(const std::vector<bool>& stubs_bool) {
 bool sortByPt(const TTTrack2& lhs, const TTTrack2& rhs) {
     return lhs.pt() > rhs.pt();
 }
+
+// principal component cut function
+bool PrincipalCuts(std::vector<float> princes){
+  bool pass=true;
+  const float Cuts6[12]={58.,33.,22.,12.,-1.,-1.,9.,3.,3.,3.,-1.,-1.};
+  const float Cuts5[10]={33.,22.,12.,-1.,-1.,3.,3.,3.,-1.,-1.};
+  if(princes.size()==12) for(unsigned i=0; i<princes.size(); ++i){
+    if(Cuts6[i]==-1) continue;
+    if(fabs(princes[i])>Cuts6[i]){
+      pass=false;
+      break;
+    }
+  }
+  else for(unsigned i=0; i<princes.size(); ++i){
+    if(Cuts5[i]==-1) continue;
+    if(fabs(princes[i])>Cuts5[i]){
+      pass=false;
+      break;
+    }
+  }
+  return pass;
+}
 }
 
 
@@ -173,8 +195,11 @@ int TrackFitter::makeTracks(TString src, TString out) {
                 atrack.setHitBits   (acomb.hitBits);
                 atrack.setStubRefs  (acomb.stubRefs);
 
-                if (atrack.chi2Red() < po_.maxChi2)  // reduced chi^2 = chi^2 / ndof
+                if(!po_.CutPrincipals){
+		  if (atrack.chi2Red() < po_.maxChi2)  // reduced chi^2 = chi^2 / ndof
                     tracks.push_back(atrack);
+		}
+		else if(PrincipalCuts(atrack.principals())) tracks.push_back(atrack);
 
                 if (verbose_>2)  std::cout << Debug() << "... ... ... track: " << icomb << " status: " << fitstatus << " reduced chi2: " << atrack.chi2Red() << " invPt: " << atrack.invPt() << " phi0: " << atrack.phi0() << " cottheta: " << atrack.cottheta() << " z0: " << atrack.z0() << std::endl;
             }

@@ -49,6 +49,7 @@ struct ProgramOption {
     unsigned    hitBits;
 
     float       maxChi2;
+    bool	CutPrincipals;
     int         minNdof;
     int         maxCombs;
     int         maxTracks;
