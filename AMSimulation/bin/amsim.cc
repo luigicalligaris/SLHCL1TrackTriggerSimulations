@@ -1,6 +1,7 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/StubCleaner.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/PatternGenerator.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/PatternMatcher.h"
+#include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZRoadFilter.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/MatrixBuilder.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/TrackFitter.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/PatternAnalyzer.h"
@@ -37,6 +38,7 @@ int main(int argc, char **argv) {
         ("stubCleaning,C"      , "Clean stubs and pick one unique stub per layer")
         ("bankGeneration,B"    , "Generate associative memory pattern bank")
         ("patternRecognition,R", "Run associative memory pattern recognition")
+        ("filterRoadsHTRZ,H"   , "Filter the roads through an r-z Hough Transform")
         ("matrixBuilding,M"    , "Calculate matrix constants for PCA track fitting")
         ("trackFitting,T"      , "Perform track fitting")
         ("bankAnalysis,A"      , "Analyze associative memory pattern bank")
@@ -176,13 +178,14 @@ int main(int argc, char **argv) {
     int vmcount = vm.count("stubCleaning")       +
                   vm.count("bankGeneration")     +
                   vm.count("patternRecognition") +
+                  vm.count("filterRoadsHTRZ")    +
                   vm.count("matrixBuilding")     +
                   vm.count("trackFitting")       +
                   vm.count("bankAnalysis")       +
                   vm.count("matrixTesting")      +
                   vm.count("write")              ;
     if (vmcount != 1) {
-        std::cerr << "ERROR: Must select exactly one of '-C', '-B', '-R', '-M', '-T', '-A', '-U', or 'W'" << std::endl;
+        std::cerr << "ERROR: Must select exactly one of '-C', '-B', '-R', '-H', '-M', '-T', '-A', '-U', or 'W'" << std::endl;
         //std::cout << visible << std::endl;
         return EXIT_FAILURE;
     }
@@ -243,6 +246,17 @@ int main(int argc, char **argv) {
         int exitcode = matcher.run();
         if (exitcode) {
             std::cerr << "An error occurred during pattern recognition. Exiting." << std::endl;
+            return exitcode;
+        }
+        std::cout << "Pattern recognition " << Color("lgreenb") << "DONE" << EndColor() << "." << std::endl;
+
+    } else if (vm.count("filterRoadsHTRZ")) {
+        std::cout << Color("magenta") << "Start r-z Hough Transform road filtering..." << EndColor() << std::endl;
+
+        HTRZRoadFilter htRZFilter(option);
+        int exitcode = htRZFilter.run();
+        if (exitcode) {
+            std::cerr << "An error occurred during r-z Hough Transform. Exiting." << std::endl;
             return exitcode;
         }
         std::cout << "Pattern recognition " << Color("lgreenb") << "DONE" << EndColor() << "." << std::endl;
