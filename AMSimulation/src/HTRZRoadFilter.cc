@@ -1,6 +1,7 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZRoadFilter.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulationIO/interface/TTRoadReader.h"
 
+using namespace slhcl1tt;
 
 // These below are set to private in class declaration
 HTRZRoadFilter::HTRZRoadFilter() :
