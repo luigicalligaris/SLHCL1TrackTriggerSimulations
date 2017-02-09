@@ -151,28 +151,32 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
       if (iroad >= (unsigned) po_.maxRoads)
         break;
 
-      // Instantiate output TTRoad
-      TTRoad out_road;
 
       switch (mode_)
       {
         case FILTER_ROADS:
+        {
+          ((void*)0); //NOP
+        }
+        break;
         
         case NULL_ALGO:
         default:
         {
+          // Instantiate output TTRoad
+          TTRoad out_road;
+          
           out_road.patternRef    = reader.vr_patternRef    ->at(iroad);
           out_road.tower         = reader.vr_tower         ->at(iroad);
           out_road.nstubs        = reader.vr_nstubs        ->at(iroad);
           out_road.patternInvPt  = reader.vr_patternInvPt  ->at(iroad);
           out_road.superstripIds = reader.vr_superstripIds ->at(iroad);
           out_road.stubRefs      = reader.vr_stubRefs      ->at(iroad);
+          
+          out_roads.push_back(out_road);
         }
         break;
-        
       }
-      
-      out_roads.push_back(out_road);
     }
 
     writer.fill(out_roads);
