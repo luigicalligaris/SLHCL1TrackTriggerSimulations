@@ -141,7 +141,8 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
       continue;
     }
 
-    out_roads.clear();
+    // Not needed
+    //out_roads.clear();
 
     // Process the input roads
     for (unsigned iroad = 0; iroad < nroads; ++iroad) {
