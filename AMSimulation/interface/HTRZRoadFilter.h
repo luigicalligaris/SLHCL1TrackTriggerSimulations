@@ -11,12 +11,12 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/AssociativeMemory.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HitBuffer.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/ModuleOverlapMap.h"
-using namespace slhcl1tt;
+
 
 
 class HTRZRoadFilter {
   public:
-    HTRZRoadFilter(const ProgramOption& po);
+    HTRZRoadFilter(const slhcl1tt::ProgramOption& po);
     ~HTRZRoadFilter();
 
     // Main driver
@@ -41,9 +41,9 @@ class HTRZRoadFilter {
     // Order of members should be smaller to bigger (refer to class members memory alignment)
 
     // Program options
-    int           verbose_   ;
-    long long     maxEvents_ ;
-    ProgramOption po_        ;
+    int                     verbose_   ;
+    long long               maxEvents_ ;
+    slhcl1tt::ProgramOption po_        ;
 
     // Configurations
     TString  readRoadPrefix_ ;
