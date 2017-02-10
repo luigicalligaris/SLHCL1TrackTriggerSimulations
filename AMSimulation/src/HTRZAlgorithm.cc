@@ -4,6 +4,7 @@
 #include "boost/multi_array.hpp"
 
 // #include <unordered_map>
+#include <unordered_set>
 #include <array>
 
 using namespace slhcl1tt;
@@ -112,9 +113,36 @@ struct HTRZCell
 };
 
 
+bool majority_all_layers(HTRZCell const& cell, unsigned int const threshold)
+{
+  unsigned int count = 0;
+  
+  for (auto const& layer : cell.stubrefs_by_layer)
+    if (!layer.empty())
+      ++count;
+  
+  return count >= threshold;
+}
+
+
+bool majority_ps_layers(HTRZCell const& cell, unsigned int const threshold)
+{
+  unsigned int count = 0;
+  
+  for (unsigned int i = 0; i < 3; ++i)
+    if (!cell.stubrefs_by_layer[i].empty())
+      ++count;
+  
+  return count >= threshold;
+}
+
+
+
 TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader const& reader)
 {
   TTRoad output_road;
+  
+  std::unordered_set<unsigned int> passing_stubrefs;
   
   switch (mode_)
   {
@@ -174,12 +202,14 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
               {
                 // The z0 at this column falls out of the bottom of the matrix
                 bound_accept[iCot] = false;
+                bound_iZ0   [iCot] = 0;
                 continue;
               }
               else if (z0 > ht_bounds_z0.back() )
               {
                 // The z0 at this column falls out of the top of the matrix
                 bound_accept[iCot] = false;
+                bound_iZ0   [iCot] = nbins_z0_ - 1;
                 continue;
               }
               else
@@ -217,16 +247,68 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
             // set acceptance policy.
             for (unsigned iCot = 0; iCot < nbins_cotantheta_; ++iCot)
             {
-            
+              if (!bound_accept[iCot] && !bound_accept[iCot + 1])
+              {
+                // Both borders are invalid, skip the stub in this column
+                continue;
+              }
+              else if (bound_accept[iCot] && bound_accept[iCot + 1])
+              {
+                // Both borders are valid, save as many cells as are crossed by the line
+                if (bound_iZ0[iCot] <= bound_iZ0[iCot + 1])
+                  for (unsigned iZ0 = bound_iZ0[iCot]; iZ0 < bound_iZ0[iCot + 1] + 1; ++iZ0)
+                    ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
+                else
+                {
+                  for (unsigned iZ0 = bound_iZ0[iCot + 1]; iZ0 < bound_iZ0[iCot] + 1; ++iZ0)
+                    ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
+                }
+              }
+              else
+              {
+                // One border is valid, the other is not. Follow the set acceptance policy.
+                switch (HTRZAlgorithm_stub_accept_policy_)
+                {
+                  case LOOSE_ALL_NEIGHBOURS:
+                    {
+                      if (bound_iZ0[iCot] <= bound_iZ0[iCot + 1])
+                        for (unsigned iZ0 = bound_iZ0[iCot]; iZ0 < bound_iZ0[iCot + 1] + 1; ++iZ0)
+                          ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
+                      else
+                      {
+                        for (unsigned iZ0 = bound_iZ0[iCot + 1]; iZ0 < bound_iZ0[iCot] + 1; ++iZ0)
+                          ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
+                      }
+                    }
+                    break;
+                  case MEDIUM_NEAR_NEIGHBOUR:
+                    {
+                      if (bound_accept[iCot])
+                        ht_matrix[iCot][ bound_iZ0[iCot]     ].stubrefs_by_layer[iLayer].push_back(stubRef);
+                      else
+                        ht_matrix[iCot][ bound_iZ0[iCot + 1] ].stubrefs_by_layer[iLayer].push_back(stubRef);
+                    }
+                    break;
+                  case TIGHT_NO_NEIGHBOURS:
+                    break;
+                  default:
+                    break;
+                }
+              }
             }
-            ht_matrix[iCot][            0].stubrefs_by_layer[iLayer].push_back(stubRef);
-            ht_matrix[iCot][nbins_z0_ - 1].stubrefs_by_layer[iLayer].push_back(stubRef);
-            ht_matrix[iCot][          iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
-            
           }
         }
         
-        return input_road;
+        // Loop over the matrix cells and take note of stubrefs in cells activated my the majority logic
+        for (unsigned int iCot = 0; iCot < nbins_cotantheta_; ++iCot)
+          for (unsigned int iZ0 = 0; iZ0 < nbins_z0_; ++iZ0)
+            if (majority_all_layers(ht_matrix[iCot][iZ0]), 5)
+              for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)
+                for(unsigned int const stubref : ht_matrix[iCot][ bound_iZ0[iCot + 1] ].stubrefs_by_layer[iLayer])
+                {
+                  passing_stubrefs.insert(stubref);
+                }
+        
       }
       break;
     case HTRZ_1D_COTANTHETA:
@@ -237,6 +319,21 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
     default:
       break;
   }
+  
+  output_road.patternRef    = input_road.patternRef    ;
+  output_road.tower         = input_road.tower         ;
+  output_road.patternInvPt  = input_road.patternInvPt  ;
+  output_road.superstripIds = input_road.superstripIds ;
+  
+  for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)
+    for (unsigned int const in_stubref : input_road.stubRefs[iLayer])
+    {
+      if (passing_stubrefs.find(in_stubref) != passing_stubrefs.end())
+        output_road.stubRefs[iLayer].push_back(in_stubref);
+    }
+  
+  
+  output_road.nstubs = passing_stubrefs.size();
   
   return output_road;
 }
