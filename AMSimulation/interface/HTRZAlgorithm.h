@@ -5,7 +5,7 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulationIO/interface/TTRoadReader.h"
 
 // 2D HT matrix or 1D histogram?
-enum HTRZAlgorithm_mode_t {HTRZ_1D_COTANTHETA, HTRZ_2D_COTANTHETA_Z0};
+enum HTRZAlgorithm_mode_t {HTRZ_2D_COTANTHETA_Z0, HTRZ_1D_COTANTHETA};
 enum HTRZAlgorithm_stub_accept_policy_t {LOOSE_ALL_NEIGHBOURS, MEDIUM_NEAR_NEIGHBOUR, TIGHT_NO_NEIGHBOURS};
 
 struct HTRZAlgorithmConfig

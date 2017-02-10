@@ -6,13 +6,15 @@
 // #include <unordered_map>
 #include <unordered_set>
 #include <array>
+#include <iostream>
+#include <cstdlib>
 
 using namespace slhcl1tt;
 
 
 HTRZAlgorithm::HTRZAlgorithm():
-  mode_              (  HTRZ_1D_COTANTHETA),
-  stub_accept_policy_(LOOSE_ALL_NEIGHBOURS),
+  mode_              (HTRZ_2D_COTANTHETA_Z0),
+  stub_accept_policy_( LOOSE_ALL_NEIGHBOURS),
   max_z0_            ( 15.0),
   min_z0_            (-15.0),
   max_cotantheta_    ( 13.5),
@@ -119,7 +121,9 @@ bool majority_all_layers(HTRZCell const& cell, unsigned int const threshold)
   
   for (auto const& layer : cell.stubrefs_by_layer)
     if (!layer.empty())
+    {
       ++count;
+    }
   
   return count >= threshold;
 }
@@ -140,6 +144,15 @@ bool majority_ps_layers(HTRZCell const& cell, unsigned int const threshold)
 
 TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader const& reader)
 {
+  std::cerr 
+    << "In road nstubs: " 
+      << input_road.stubRefs.at(0).size() << " "
+      << input_road.stubRefs.at(1).size() << " "
+      << input_road.stubRefs.at(2).size() << " "
+      << input_road.stubRefs.at(3).size() << " "
+      << input_road.stubRefs.at(4).size() << " "
+      << input_road.stubRefs.at(5).size() << " ";
+  
   TTRoad output_road;
   
   std::unordered_set<unsigned int> passing_stubrefs;
@@ -157,16 +170,15 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
 
         for (unsigned iCot = 0; iCot < nbins_cotantheta_ + 1; ++iCot)
         {
-          ht_bounds_cotantheta[iCot] = min_cotantheta_ * (double(nbins_cotantheta_ - iCot)/double(nbins_cotantheta_)) + max_cotantheta_ * (double(iCot)/double(nbins_cotantheta_));
+          ht_bounds_cotantheta.push_back( min_cotantheta_ * (double(nbins_cotantheta_ - iCot)/double(nbins_cotantheta_)) + max_cotantheta_ * (double(iCot)/double(nbins_cotantheta_)) );
         }
 
         for (unsigned iZ0 = 0; iZ0 < nbins_z0_ + 1; ++iZ0)
         {
-          ht_bounds_z0[iZ0] = min_z0_ * (double(nbins_z0_ - iZ0)/double(nbins_z0_)) + max_z0_ * (double(iZ0)/double(nbins_z0_));
+          ht_bounds_z0.push_back( min_z0_ * (double(nbins_z0_ - iZ0)/double(nbins_z0_)) + max_z0_ * (double(iZ0)/double(nbins_z0_)) );
         }
 
         // The way we build the boundaries vectors makes them sorted in an increasing value order, no duplicates
-
 
         // There is 1 superstrip per layer
         for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)
@@ -190,8 +202,10 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
 //             const int      stub_tpId       = reader.vb_tpId       ->at(stubRef);
             
             // Instantiate & bootstrap the boundary vectors
-            std::vector<        bool, nbins_cotantheta_ + 1> bound_accept = {};
-            std::vector<unsigned int, nbins_cotantheta_ + 1> bound_iZ0    = {};
+            std::vector<        bool> bound_accept (nbins_cotantheta_ + 1, false);
+            std::vector<unsigned int> bound_iZ0    (nbins_z0_         + 1,     0);
+            
+            
             
             // Loop on the (nbins_cotantheta_ + 1) bin edges
             for (unsigned iCot = 0; iCot < nbins_cotantheta_ + 1; ++iCot)
@@ -267,7 +281,7 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
               else
               {
                 // One border is valid, the other is not. Follow the set acceptance policy.
-                switch (HTRZAlgorithm_stub_accept_policy_)
+                switch (stub_accept_policy_)
                 {
                   case LOOSE_ALL_NEIGHBOURS:
                     {
@@ -302,12 +316,14 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
         // Loop over the matrix cells and take note of stubrefs in cells activated my the majority logic
         for (unsigned int iCot = 0; iCot < nbins_cotantheta_; ++iCot)
           for (unsigned int iZ0 = 0; iZ0 < nbins_z0_; ++iZ0)
-            if (majority_all_layers(ht_matrix[iCot][iZ0]), 5)
+            if ( majority_all_layers(ht_matrix[iCot][iZ0], 5) )
+            {
               for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)
-                for(unsigned int const stubref : ht_matrix[iCot][ bound_iZ0[iCot + 1] ].stubrefs_by_layer[iLayer])
+                for(unsigned int const stubref : ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer])
                 {
                   passing_stubrefs.insert(stubref);
                 }
+            }
         
       }
       break;
@@ -326,14 +342,30 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
   output_road.superstripIds = input_road.superstripIds ;
   
   for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)
+  {
+    output_road.stubRefs.push_back( std::vector<unsigned>() );
+    
     for (unsigned int const in_stubref : input_road.stubRefs[iLayer])
     {
       if (passing_stubrefs.find(in_stubref) != passing_stubrefs.end())
         output_road.stubRefs[iLayer].push_back(in_stubref);
     }
+  }
   
   
   output_road.nstubs = passing_stubrefs.size();
+  
+  std::cerr 
+    << "    Out road nstubs: " 
+      << output_road.stubRefs.at(0).size() << " "
+      << output_road.stubRefs.at(1).size() << " "
+      << output_road.stubRefs.at(2).size() << " "
+      << output_road.stubRefs.at(3).size() << " "
+      << output_road.stubRefs.at(4).size() << " "
+      << output_road.stubRefs.at(5).size() << " ";
+  
+  std::cerr 
+      << std::endl;
   
   return output_road;
 }

@@ -1,4 +1,5 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZRoadFilter.h"
+#include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZAlgorithm.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulationIO/interface/TTRoadReader.h"
 
 using namespace slhcl1tt;
@@ -68,7 +69,7 @@ HTRZRoadFilter& HTRZRoadFilter::operator=(HTRZRoadFilter&&      rhs) {
 
 // The actual constructor we use
 HTRZRoadFilter::HTRZRoadFilter(const ProgramOption& po) :
-             mode_ (NULL_ALGO           ),
+             mode_ (FILTER_ROADS        ),
           verbose_ (po.verbose          ),
         maxEvents_ (po.maxEvents        ),
                po_ (po                  ),
@@ -156,7 +157,29 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
       {
         case FILTER_ROADS:
         {
-          ((void*)0); //NOP
+          HTRZAlgorithmConfig algo_config;
+          algo_config.mode               = HTRZ_2D_COTANTHETA_Z0 ;
+          algo_config.stub_accept_policy = LOOSE_ALL_NEIGHBOURS  ;
+          algo_config.max_z0             =                 +15.0 ;
+          algo_config.min_z0             =                 -15.0 ;
+          algo_config.max_cotantheta     =                 +13.5 ;
+          algo_config.min_cotantheta     =                 +13.5 ;
+          algo_config.nbins_z0           =                     8 ;
+          algo_config.nbins_cotantheta   =                     8 ;
+          
+          HTRZAlgorithm algo(algo_config);
+          
+          TTRoad in_road;
+          
+          in_road.patternRef    = reader.vr_patternRef    ->at(iroad);
+          in_road.tower         = reader.vr_tower         ->at(iroad);
+          in_road.nstubs        = reader.vr_nstubs        ->at(iroad);
+          in_road.patternInvPt  = reader.vr_patternInvPt  ->at(iroad);
+          in_road.superstripIds = reader.vr_superstripIds ->at(iroad);
+          in_road.stubRefs      = reader.vr_stubRefs      ->at(iroad);
+          
+          TTRoad out_road = algo.Filter(in_road, reader);
+          out_roads.push_back(out_road);
         }
         break;
         
