@@ -3,6 +3,7 @@
 
 #include "boost/multi_array.hpp"
 
+#include <set>
 // #include <unordered_map>
 #include <unordered_set>
 #include <array>
@@ -117,13 +118,27 @@ struct HTRZCell
 
 bool majority_all_layers(HTRZCell const& cell, unsigned int const threshold)
 {
+//   std::cerr << "call to majority_all_layers" << std::endl;
+  
   unsigned int count = 0;
   
-  for (auto const& layer : cell.stubrefs_by_layer)
-    if (!layer.empty())
+  for (unsigned int i = 0; i < HTRZAlgorithm::NLAYERS; ++i)
+  {
+//     std::cerr << "Layer " << i << " stubrefs vector size = " << cell.stubrefs_by_layer[i].size()  << std::endl;
+    
+    if (!cell.stubrefs_by_layer[i].empty())
     {
+//       std::cerr << "count = " << count << std::endl;
       ++count;
     }
+  }
+  
+//   for (auto const& layer : cell.stubrefs_by_layer)
+//     if (!layer.empty())
+//     {
+//       std::cerr << "count = " << count << std::endl;
+//       ++count;
+//     }
   
   return count >= threshold;
 }
@@ -142,16 +157,20 @@ bool majority_ps_layers(HTRZCell const& cell, unsigned int const threshold)
 
 
 
+constexpr static const double lut_pixel_halfwidth_z_bylayer[] = {0.0722812068078, 0.0722812068078, 0.0722812068078, 2.5125007629395, 2.5125007629395, 2.5125007629395};
+
+
+
 TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader const& reader)
 {
-  std::cerr 
-    << "In road nstubs: " 
-      << input_road.stubRefs.at(0).size() << " "
-      << input_road.stubRefs.at(1).size() << " "
-      << input_road.stubRefs.at(2).size() << " "
-      << input_road.stubRefs.at(3).size() << " "
-      << input_road.stubRefs.at(4).size() << " "
-      << input_road.stubRefs.at(5).size() << " ";
+//   std::cerr 
+//     << "In road nstubs: " 
+//       << input_road.stubRefs.at(0).size() << " "
+//       << input_road.stubRefs.at(1).size() << " "
+//       << input_road.stubRefs.at(2).size() << " "
+//       << input_road.stubRefs.at(3).size() << " "
+//       << input_road.stubRefs.at(4).size() << " "
+//       << input_road.stubRefs.at(5).size() << " ";
   
   TTRoad output_road;
   
@@ -170,7 +189,8 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
 
         for (unsigned iCot = 0; iCot < nbins_cotantheta_ + 1; ++iCot)
         {
-          ht_bounds_cotantheta.push_back( min_cotantheta_ * (double(nbins_cotantheta_ - iCot)/double(nbins_cotantheta_)) + max_cotantheta_ * (double(iCot)/double(nbins_cotantheta_)) );
+//           ht_bounds_cotantheta.push_back( min_cotantheta_ * (double(nbins_cotantheta_ - iCot)/double(nbins_cotantheta_)) + max_cotantheta_ * (double(iCot)/double(nbins_cotantheta_)) );
+          ht_bounds_cotantheta.push_back( min_cotantheta_ + (max_cotantheta_ - min_cotantheta_) * double(iCot)/double(nbins_cotantheta_) );
         }
 
         for (unsigned iZ0 = 0; iZ0 < nbins_z0_ + 1; ++iZ0)
@@ -202,58 +222,60 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
 //             const int      stub_tpId       = reader.vb_tpId       ->at(stubRef);
             
             // Instantiate & bootstrap the boundary vectors
-            std::vector<        bool> bound_accept (nbins_cotantheta_ + 1, false);
-            std::vector<unsigned int> bound_iZ0    (nbins_z0_         + 1,     0);
+            std::vector<                       bool > bound_accept (nbins_cotantheta_ + 1,  false);
+            std::vector< std::vector< unsigned int> > bound_iZ0    (nbins_z0_         + 1,  std::vector<unsigned>());
             
             
             
             // Loop on the (nbins_cotantheta_ + 1) bin edges
             for (unsigned iCot = 0; iCot < nbins_cotantheta_ + 1; ++iCot)
             {
-              double const z0 = stub_and_cotantheta_to_z0(stub_z, stub_r, ht_bounds_cotantheta[iCot]);
+              double const z0_lo = stub_and_cotantheta_to_z0(stub_z - lut_pixel_halfwidth_z_bylayer[iLayer], stub_r, ht_bounds_cotantheta[iCot]);
+              double const z0_hi = stub_and_cotantheta_to_z0(stub_z + lut_pixel_halfwidth_z_bylayer[iLayer], stub_r, ht_bounds_cotantheta[iCot]);
               
-              if      (z0 < ht_bounds_z0.front())
+              std::cerr << "z0_lo = " << z0_lo << "  z0_hi = " << z0_hi << std::endl;
+              assert(z0_lo < z0_hi);
+              
+//               std::cerr << "stub_z " << stub_z << " stub_r " << stub_r << " cotan theta bound " << iCot << " with value " << ht_bounds_cotantheta[iCot] << " ---> " << z0 << std::endl;
+              
+              if      (z0_hi < ht_bounds_z0.front())
               {
                 // The z0 at this column falls out of the bottom of the matrix
                 bound_accept[iCot] = false;
-                bound_iZ0   [iCot] = 0;
-                continue;
               }
-              else if (z0 > ht_bounds_z0.back() )
+              else if (z0_lo > ht_bounds_z0.back() )
               {
                 // The z0 at this column falls out of the top of the matrix
                 bound_accept[iCot] = false;
-                bound_iZ0   [iCot] = nbins_z0_ - 1;
-                continue;
               }
               else
               {
-                if      (z0 == ht_bounds_z0.front())
-                {
-                  // z0 compatible with the bottom edge (i.e. we are at the very rare crossing point between 2 cells at the matrix bottom)
-                  // reminder: we keep semi-open intervals [lower, upper)
-                  bound_accept[iCot] = true;
-                  bound_iZ0   [iCot] = 0;
-                }
-                else if (z0 == ht_bounds_z0.back() )
-                {
-                  // z0 compatible with the top edge (i.e. we are at the very rare crossing point between 2 cells at the matrix top)
-                  // reminder: we keep semi-open intervals [lower, upper)
-                  bound_accept[iCot] = false;
-                  bound_iZ0   [iCot] = nbins_z0_ - 1;
-                }
-                else
-                {
-                  // We are strictly inside the matrix in the vertical direction
-                  unsigned int const iZ0 = std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0) );
-                  
-                  // This true statement can be changed to more complicated requirements.
-                  // For now the matrix boundaries (-15.0,15.0) are enough to guarantee 
-                  // the respect of the condition we care about: that the track candidate 
-                  // is compatible with a real track from collisions.
-                  bound_accept[iCot] = true;
-                  bound_iZ0   [iCot] = iZ0;
-                }
+                // We are inside the matrix in the vertical direction
+                unsigned int const iZ0_lo = z0_lo <= ht_bounds_z0.front() ? 0 : 
+                (
+                  z0_lo >= ht_bounds_z0.back() ? nbins_z0_ - 1 : 
+                    std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_lo) )
+                );
+                
+                unsigned int const iZ0_hi = z0_hi <= ht_bounds_z0.front() ? 0 : 
+                (
+                  z0_hi >= ht_bounds_z0.back() ? nbins_z0_ - 1 : 
+                    std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_hi) )
+                );
+                
+                std::cerr << "z0_lo = " << z0_lo << "  z0_hi = " << z0_hi << "  iZ0_lo = " << iZ0_lo << "  iZ0_hi = " << iZ0_hi << std::endl;
+                assert(iZ0_lo <= iZ0_hi);
+                
+                // This true statement can be changed to more complicated requirements.
+                // For now the matrix boundaries (-15.0,15.0) are enough to guarantee 
+                // the respect of the condition we care about: that the track candidate 
+                // is compatible with a real track from collisions.
+                bound_accept[iCot] = true;
+                
+                for (unsigned int iZ0 = iZ0_lo; iZ0 <= iZ0_hi; ++iZ0)
+                  bound_iZ0[iCot].push_back(iZ0);
+                
+                assert(!bound_iZ0[iCot].empty());
               }
             }
             
@@ -261,49 +283,88 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
             // set acceptance policy.
             for (unsigned iCot = 0; iCot < nbins_cotantheta_; ++iCot)
             {
+//               std::cerr << "layer " << iLayer << " stubRef " << stubRef << " cotan theta bin " << iCot;
+              
               if (!bound_accept[iCot] && !bound_accept[iCot + 1])
               {
                 // Both borders are invalid, skip the stub in this column
+//                 std::cerr << " both borders invalid --> reject " << std::endl;
                 continue;
               }
               else if (bound_accept[iCot] && bound_accept[iCot + 1])
               {
+//                 std::cerr << " both borders valid --> accept " << std::endl;
                 // Both borders are valid, save as many cells as are crossed by the line
-                if (bound_iZ0[iCot] <= bound_iZ0[iCot + 1])
-                  for (unsigned iZ0 = bound_iZ0[iCot]; iZ0 < bound_iZ0[iCot + 1] + 1; ++iZ0)
-                    ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
-                else
-                {
-                  for (unsigned iZ0 = bound_iZ0[iCot + 1]; iZ0 < bound_iZ0[iCot] + 1; ++iZ0)
-                    ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
-                }
+//                 if (bound_iZ0[iCot] <= bound_iZ0[iCot + 1])
+//                   for (unsigned iZ0 = bound_iZ0[iCot]; iZ0 < bound_iZ0[iCot + 1] + 1; ++iZ0)
+//                     ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
+//                 else
+//                 {
+//                   for (unsigned iZ0 = bound_iZ0[iCot + 1]; iZ0 < bound_iZ0[iCot] + 1; ++iZ0)
+//                     ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
+//                 }
+                
+                std::set<unsigned> merged_iZ0( bound_iZ0[iCot    ].begin(), bound_iZ0[iCot    ].end() );
+                merged_iZ0            .insert( bound_iZ0[iCot + 1].begin(), bound_iZ0[iCot + 1].end() );
+                
+                for (unsigned iZ0 : merged_iZ0)
+                  ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
               }
               else
               {
+//                 std::cerr << " one border valid, another invalid --> loookup policy ";
                 // One border is valid, the other is not. Follow the set acceptance policy.
                 switch (stub_accept_policy_)
                 {
                   case LOOSE_ALL_NEIGHBOURS:
                     {
-                      if (bound_iZ0[iCot] <= bound_iZ0[iCot + 1])
-                        for (unsigned iZ0 = bound_iZ0[iCot]; iZ0 < bound_iZ0[iCot + 1] + 1; ++iZ0)
-                          ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
-                      else
+//                       std::cerr << " --> all neighbors added " << std::endl;
+                      
+//                       if (bound_iZ0[iCot] <= bound_iZ0[iCot + 1])
+//                         for (unsigned iZ0 = bound_iZ0[iCot]; iZ0 < bound_iZ0[iCot + 1] + 1; ++iZ0)
+//                           ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
+//                       else
+//                       {
+//                         for (unsigned iZ0 = bound_iZ0[iCot + 1]; iZ0 < bound_iZ0[iCot] + 1; ++iZ0)
+//                           ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
+//                       }
+                      
+                      std::set<unsigned> merged_iZ0( bound_iZ0[iCot    ].begin(), bound_iZ0[iCot    ].end() );
+                      merged_iZ0            .insert( bound_iZ0[iCot + 1].begin(), bound_iZ0[iCot + 1].end() );
+                      
+                      std::cerr << "A     merged_iZ0.size() = " << merged_iZ0.size() << std::endl;
+                      unsigned iZ0_end = *(merged_iZ0.rbegin());
+                      std::cerr << "B     iZ0_end = " << iZ0_end << std::endl;
+                      for (unsigned iZ0 = *(merged_iZ0.begin()); iZ0 < iZ0_end; ++iZ0)
                       {
-                        for (unsigned iZ0 = bound_iZ0[iCot + 1]; iZ0 < bound_iZ0[iCot] + 1; ++iZ0)
-                          ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
+                        std::cerr << "C     iZ0 = " << iZ0 << std::endl;
+                        ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
                       }
+                      
                     }
                     break;
                   case MEDIUM_NEAR_NEIGHBOUR:
                     {
+//                       std::cerr << " --> near neighbor added " << std::endl;
+                      
+//                       if (bound_accept[iCot])
+//                         ht_matrix[iCot][ bound_iZ0[iCot]     ].stubrefs_by_layer[iLayer].push_back(stubRef);
+//                       else
+//                         ht_matrix[iCot][ bound_iZ0[iCot + 1] ].stubrefs_by_layer[iLayer].push_back(stubRef);
+                      
+                      
                       if (bound_accept[iCot])
-                        ht_matrix[iCot][ bound_iZ0[iCot]     ].stubrefs_by_layer[iLayer].push_back(stubRef);
+                        for (unsigned iZ0 : bound_iZ0[iCot    ])
+                          ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
                       else
-                        ht_matrix[iCot][ bound_iZ0[iCot + 1] ].stubrefs_by_layer[iLayer].push_back(stubRef);
+                        for (unsigned iZ0 : bound_iZ0[iCot + 1])
+                          ht_matrix[iCot][iZ0].stubrefs_by_layer[iLayer].push_back(stubRef);
                     }
                     break;
                   case TIGHT_NO_NEIGHBOURS:
+                    {
+//                       std::cerr << " --> none added " << std::endl;
+                    }
                     break;
                   default:
                     break;
@@ -355,17 +416,17 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
   
   output_road.nstubs = passing_stubrefs.size();
   
-  std::cerr 
-    << "    Out road nstubs: " 
-      << output_road.stubRefs.at(0).size() << " "
-      << output_road.stubRefs.at(1).size() << " "
-      << output_road.stubRefs.at(2).size() << " "
-      << output_road.stubRefs.at(3).size() << " "
-      << output_road.stubRefs.at(4).size() << " "
-      << output_road.stubRefs.at(5).size() << " ";
-  
-  std::cerr 
-      << std::endl;
+//   std::cerr 
+//     << "    Out road nstubs: " 
+//       << output_road.stubRefs.at(0).size() << " "
+//       << output_road.stubRefs.at(1).size() << " "
+//       << output_road.stubRefs.at(2).size() << " "
+//       << output_road.stubRefs.at(3).size() << " "
+//       << output_road.stubRefs.at(4).size() << " "
+//       << output_road.stubRefs.at(5).size() << " ";
+//   
+//   std::cerr 
+//       << std::endl;
   
   return output_road;
 }

@@ -163,7 +163,7 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
           algo_config.max_z0             =                 +15.0 ;
           algo_config.min_z0             =                 -15.0 ;
           algo_config.max_cotantheta     =                 +13.5 ;
-          algo_config.min_cotantheta     =                 +13.5 ;
+          algo_config.min_cotantheta     =                 -13.5 ;
           algo_config.nbins_z0           =                     8 ;
           algo_config.nbins_cotantheta   =                     8 ;
           
