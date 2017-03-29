@@ -10,14 +10,16 @@ enum HTRZAlgorithm_stub_accept_policy_t {LOOSE_ALL_NEIGHBOURS, MEDIUM_NEAR_NEIGH
 
 struct HTRZAlgorithmConfig
 {
-  HTRZAlgorithm_mode_t               mode              ;
-  HTRZAlgorithm_stub_accept_policy_t stub_accept_policy;
-  double                             max_z0            ;
-  double                             min_z0            ;
-  double                             max_cotantheta    ;
-  double                             min_cotantheta    ;
-  unsigned                           nbins_z0          ;
-  unsigned                           nbins_cotantheta  ;
+  HTRZAlgorithm_mode_t               mode                 ;
+  HTRZAlgorithm_stub_accept_policy_t stub_accept_policy   ;
+  unsigned                           nbins_z0             ;
+  unsigned                           nbins_cotantheta     ;
+  unsigned                           threshold_all_layers ;
+  unsigned                           threshold_ps_layers  ;
+  double                             max_z0               ;
+  double                             min_z0               ;
+  double                             max_cotantheta       ;
+  double                             min_cotantheta       ;
 };
 
 
@@ -100,12 +102,14 @@ private:
   HTRZAlgorithm_mode_t               mode_              ;
   HTRZAlgorithm_stub_accept_policy_t stub_accept_policy_;
 
-  double   max_z0_          ;
-  double   min_z0_          ;
-  double   max_cotantheta_  ;
-  double   min_cotantheta_  ;
-  unsigned nbins_z0_        ;
-  unsigned nbins_cotantheta_;
+  unsigned nbins_z0_             ;
+  unsigned nbins_cotantheta_     ;
+  unsigned threshold_all_layers_ ;
+  unsigned threshold_ps_layers_  ;
+  double   max_z0_               ;
+  double   min_z0_               ;
+  double   max_cotantheta_       ;
+  double   min_cotantheta_       ;
 };
 
 #endif

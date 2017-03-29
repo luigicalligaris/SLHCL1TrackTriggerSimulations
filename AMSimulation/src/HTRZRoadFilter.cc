@@ -116,7 +116,7 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
 
 
   // Monitoring counters for read events and kept events
-  long int nRead = 0, nKept = 0;
+  long int nEvtRead = 0, nEvtKept = 0, nRoadRead = 0, nRoadKept = 0;
 
   // Output vector
   std::vector<TTRoad> out_roads;
@@ -131,7 +131,7 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
     const unsigned nroads = reader.vr_patternRef->size();
 
     if (verbose_ > 1 && ievt % 100 == 0)
-      std::cout << Debug() << Form("... Processing event: %7lld, fitting: %7ld", ievt, nKept) << std::endl;
+      std::cout << Debug() << Form("... Processing event: %7lld, fitting: %7ld", ievt, nEvtKept) << std::endl;
 
     if (verbose_ > 2)
       std::cout << Debug() << "... evt: " << ievt << " # roads: " << nroads << std::endl;
@@ -139,33 +139,41 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
     // Optimization: short circuit if no roads
     if (!nroads) {  // skip if no road
       writer.fill(std::vector<TTRoad>());
-      ++nRead;
+      ++nEvtRead;
       continue;
     }
 
     // Not needed
-    //out_roads.clear();
+    out_roads.clear();
 
     // Process the input roads
-    for (unsigned iroad = 0; iroad < nroads; ++iroad) {
-
+    for (unsigned iroad = 0; iroad < nroads; ++iroad)
+    {
+      
+      std::cerr << "analyzing road " << iroad << std::endl;
+      
       if (iroad >= (unsigned) po_.maxRoads)
         break;
-
-
+      
+      ++nRoadRead;
+      
       switch (mode_)
       {
         case FILTER_ROADS:
         {
           HTRZAlgorithmConfig algo_config;
-          algo_config.mode               = HTRZ_2D_COTANTHETA_Z0 ;
-          algo_config.stub_accept_policy = LOOSE_ALL_NEIGHBOURS  ;
-          algo_config.max_z0             =                 +15.0 ;
-          algo_config.min_z0             =                 -15.0 ;
-          algo_config.max_cotantheta     =                 +13.5 ;
-          algo_config.min_cotantheta     =                 -13.5 ;
-          algo_config.nbins_z0           =                     8 ;
-          algo_config.nbins_cotantheta   =                     8 ;
+          algo_config.mode                  = HTRZ_2D_COTANTHETA_Z0 ;
+          algo_config.stub_accept_policy    = LOOSE_ALL_NEIGHBOURS  ;
+          algo_config.max_z0                =                 +15.0 ;
+          algo_config.min_z0                =                 -15.0 ;
+//           algo_config.max_cotantheta        =                 +13.5 ;
+//           algo_config.min_cotantheta        =                 -13.5 ;
+          algo_config.max_cotantheta        =                  +3.0 ;
+          algo_config.min_cotantheta        =                  -3.0 ;
+          algo_config.nbins_z0              =                    16 ;
+          algo_config.nbins_cotantheta      =                    64 ;
+          algo_config.threshold_all_layers  =                     4 ;
+          algo_config.threshold_ps_layers   =                     1 ;
           
           HTRZAlgorithm algo(algo_config);
           
@@ -179,7 +187,12 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
           in_road.stubRefs      = reader.vr_stubRefs      ->at(iroad);
           
           TTRoad out_road = algo.Filter(in_road, reader);
-          out_roads.push_back(out_road);
+          
+          if (out_road.nstubs > 0)
+          {
+            ++nRoadKept;
+            out_roads.push_back(out_road);
+          }
         }
         break;
         
@@ -196,27 +209,38 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
           out_road.superstripIds = reader.vr_superstripIds ->at(iroad);
           out_road.stubRefs      = reader.vr_stubRefs      ->at(iroad);
           
-          out_roads.push_back(out_road);
+          if (true)
+          {
+            ++nRoadKept;
+            out_roads.push_back(out_road);
+          }
         }
         break;
       }
     }
-
-    writer.fill(out_roads);
-    ++nRead;
+    
+    if (!out_roads.empty())
+    {
+      ++nEvtKept;
+      writer.fill(out_roads);
+    }
+    
+    ++nEvtRead;
   }
 
 
-  if (nRead == 0) {
+  if (nEvtRead == 0) {
     std::cout << Error() << "Failed to read any event." << std::endl;
     return 1;
   }
 
   if (verbose_)
-    std::cout << Info() << Form("Read: %7ld, triggered: %7ld", nRead, nKept) << std::endl;
+  {
+    std::cout << Info() << Form("Events Read: %7ld, triggered: %7ld   Roads Read: %7ld, triggered: %7ld", nEvtRead, nEvtKept, nRoadRead, nRoadKept) << std::endl;
+  }
 
   long long const nentries = writer.writeTree();
-  assert(nentries == nRead);
+  assert(nentries == nEvtRead);
 
   return 0;
 }
