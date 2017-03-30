@@ -4,6 +4,8 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulationDataFormats/interface/TTRoad.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulationIO/interface/TTRoadReader.h"
 
+#include <vector>
+
 // 2D HT matrix or 1D histogram?
 enum HTRZAlgorithm_mode_t {HTRZ_2D_COTANTHETA_Z0, HTRZ_1D_COTANTHETA};
 enum HTRZAlgorithm_stub_accept_policy_t {LOOSE_ALL_NEIGHBOURS, MEDIUM_NEAR_NEIGHBOUR, TIGHT_NO_NEIGHBOURS};
@@ -12,6 +14,8 @@ struct HTRZAlgorithmConfig
 {
   HTRZAlgorithm_mode_t               mode                 ;
   HTRZAlgorithm_stub_accept_policy_t stub_accept_policy   ;
+  bool                               color_output         ;
+  int                                verbose              ;
   unsigned                           nbins_z0             ;
   unsigned                           nbins_cotantheta     ;
   unsigned                           threshold_all_layers ;
@@ -21,6 +25,8 @@ struct HTRZAlgorithmConfig
   double                             max_cotantheta       ;
   double                             min_cotantheta       ;
 };
+
+
 
 
 /***
@@ -85,22 +91,31 @@ public:
   HTRZAlgorithm& operator=(HTRZAlgorithm&&      rhs);
   ~HTRZAlgorithm();
 
+  void LoadConfig(HTRZAlgorithmConfig const& config);
+
   slhcl1tt::TTRoad Filter(slhcl1tt::TTRoad const& input_road, slhcl1tt::TTRoadReader const& reader);
 
 private:
-  inline double stub_and_cotantheta_to_z0(double const zstub, double const rstub, double const cotantheta) const
+  inline double stub_and_cotantheta_to_z0(double const zstub, double const rstub, double const cotantheta) const noexcept
   {
     return zstub - rstub * cotantheta;
   }
 
-  inline double stub_and_z0_to_cotantheta(double const zstub, double const rstub, double const z0) const
+  inline double stub_and_z0_to_cotantheta(double const zstub, double const rstub, double const z0) const noexcept
   {
     return (zstub - z0) / rstub;
   }
 
+  void RegenerateBoundariesZ0();
+  void RegenerateBoundariesCotanTheta();
+  
+  inline void RegenerateBoundaries(){RegenerateBoundariesCotanTheta(); RegenerateBoundariesZ0();}
+
 private:
   HTRZAlgorithm_mode_t               mode_              ;
   HTRZAlgorithm_stub_accept_policy_t stub_accept_policy_;
+
+  int      verbose_;
 
   unsigned nbins_z0_             ;
   unsigned nbins_cotantheta_     ;
@@ -110,6 +125,9 @@ private:
   double   min_z0_               ;
   double   max_cotantheta_       ;
   double   min_cotantheta_       ;
+
+  std::vector<double> ht_bounds_cotantheta_;
+  std::vector<double> ht_bounds_z0_;
 };
 
 #endif

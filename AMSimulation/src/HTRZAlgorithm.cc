@@ -1,6 +1,8 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZAlgorithm.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulationDataFormats/interface/TTRoad.h"
 
+// #include "SLHCL1TrackTriggerSimulations/AMSimulationIO/interface/Helper.h"
+
 #include "boost/multi_array.hpp"
 
 #include <set>
@@ -12,26 +14,45 @@
 #include <cstdlib>
 #include <iterator>
 
+
+
+#define HTRZALGORITHM_DEFAULT_MODE                        HTRZ_2D_COTANTHETA_Z0
+#define HTRZALGORITHM_DEFAULT_STUB_ACCEPT_POLICY          LOOSE_ALL_NEIGHBOURS
+#define HTRZALGORITHM_DEFAULT_NBINS_Z0                    8
+#define HTRZALGORITHM_DEFAULT_NBINS_COTANTHETA            8
+#define HTRZALGORITHM_DEFAULT_NBINS_THRESHOLD_ALL_LAYERS  4
+#define HTRZALGORITHM_DEFAULT_NBINS_THRESHOLD_PS_LAYERS   2
+#define HTRZALGORITHM_DEFAULT_MAX_Z0                       15.0
+#define HTRZALGORITHM_DEFAULT_MIN_Z0                      -15.0
+#define HTRZALGORITHM_DEFAULT_MAX_COTANTHETA               13.5
+#define HTRZALGORITHM_DEFAULT_MIN_COTANTHETA              -13.5
+
+
 using namespace slhcl1tt;
 
-
 HTRZAlgorithm::HTRZAlgorithm():
-  mode_              (HTRZ_2D_COTANTHETA_Z0),
-  stub_accept_policy_( LOOSE_ALL_NEIGHBOURS),
-  nbins_z0_          (    8),
-  nbins_cotantheta_  (    8),
-  max_z0_            ( 15.0),
-  min_z0_            (-15.0),
-  max_cotantheta_    ( 13.5),
-  min_cotantheta_    (-13.5)
+  mode_                ( HTRZALGORITHM_DEFAULT_MODE                       ),
+  stub_accept_policy_  ( HTRZALGORITHM_DEFAULT_STUB_ACCEPT_POLICY         ),
+  verbose_             ( -1                                               ),
+  nbins_z0_            ( HTRZALGORITHM_DEFAULT_NBINS_Z0                   ),
+  nbins_cotantheta_    ( HTRZALGORITHM_DEFAULT_NBINS_COTANTHETA           ),
+  threshold_all_layers_( HTRZALGORITHM_DEFAULT_NBINS_THRESHOLD_ALL_LAYERS ),
+  threshold_ps_layers_ ( HTRZALGORITHM_DEFAULT_NBINS_THRESHOLD_PS_LAYERS  ),
+  max_z0_              ( HTRZALGORITHM_DEFAULT_MAX_Z0                     ),
+  min_z0_              ( HTRZALGORITHM_DEFAULT_MIN_Z0                     ),
+  max_cotantheta_      ( HTRZALGORITHM_DEFAULT_MAX_COTANTHETA             ),
+  min_cotantheta_      ( HTRZALGORITHM_DEFAULT_MIN_COTANTHETA             )
 {
   assert(max_z0_         >= min_z0_        );
   assert(max_cotantheta_ >= min_cotantheta_);
+
+  RegenerateBoundaries();
 }
 
 HTRZAlgorithm::HTRZAlgorithm(HTRZAlgorithmConfig const& config):
   mode_                (config.mode                ),
   stub_accept_policy_  (config.stub_accept_policy  ),
+  verbose_             (config.verbose             ),
   nbins_z0_            (config.nbins_z0            ),
   nbins_cotantheta_    (config.nbins_cotantheta    ),
   threshold_all_layers_(config.threshold_all_layers),
@@ -43,13 +64,18 @@ HTRZAlgorithm::HTRZAlgorithm(HTRZAlgorithmConfig const& config):
 {
   assert(max_z0_         >= min_z0_        );
   assert(max_cotantheta_ >= min_cotantheta_);
+
+  RegenerateBoundaries();
 }
 
 HTRZAlgorithm::HTRZAlgorithm(HTRZAlgorithm const& rhs):
   mode_                (rhs.mode_                  ),
   stub_accept_policy_  (rhs.stub_accept_policy_    ),
+  verbose_             (rhs.verbose_               ),
   nbins_z0_            (rhs.nbins_z0_              ),
   nbins_cotantheta_    (rhs.nbins_cotantheta_      ),
+  threshold_all_layers_(rhs.threshold_all_layers_  ),
+  threshold_ps_layers_ (rhs.threshold_ps_layers_   ),
   max_z0_              (rhs.max_z0_                ),
   min_z0_              (rhs.min_z0_                ),
   max_cotantheta_      (rhs.max_cotantheta_        ),
@@ -57,52 +83,73 @@ HTRZAlgorithm::HTRZAlgorithm(HTRZAlgorithm const& rhs):
 {
   assert(max_z0_         >= min_z0_        );
   assert(max_cotantheta_ >= min_cotantheta_);
+
+  ht_bounds_cotantheta_ = rhs.ht_bounds_cotantheta_;
+  ht_bounds_z0_         = rhs.ht_bounds_z0_        ;
 }
 
 HTRZAlgorithm::HTRZAlgorithm(HTRZAlgorithm&&      rhs):
-  mode_              (rhs.mode_              ),
-  stub_accept_policy_(rhs.stub_accept_policy_),
-  nbins_z0_          (rhs.nbins_z0_          ),
-  nbins_cotantheta_  (rhs.nbins_cotantheta_  ),
-  max_z0_            (rhs.max_z0_            ),
-  min_z0_            (rhs.min_z0_            ),
-  max_cotantheta_    (rhs.max_cotantheta_    ),
-  min_cotantheta_    (rhs.min_cotantheta_    )
+  mode_                (rhs.mode_                  ),
+  stub_accept_policy_  (rhs.stub_accept_policy_    ),
+  verbose_             (rhs.verbose_               ),
+  nbins_z0_            (rhs.nbins_z0_              ),
+  nbins_cotantheta_    (rhs.nbins_cotantheta_      ),
+  threshold_all_layers_(rhs.threshold_all_layers_  ),
+  threshold_ps_layers_ (rhs.threshold_ps_layers_   ),
+  max_z0_              (rhs.max_z0_                ),
+  min_z0_              (rhs.min_z0_                ),
+  max_cotantheta_      (rhs.max_cotantheta_        ),
+  min_cotantheta_      (rhs.min_cotantheta_        )
 {
   assert(max_z0_         >= min_z0_        );
   assert(max_cotantheta_ >= min_cotantheta_);
+
+  ht_bounds_cotantheta_ = std::move(rhs.ht_bounds_cotantheta_);
+  ht_bounds_z0_         = std::move(rhs.ht_bounds_z0_        );
 }
 
 HTRZAlgorithm& HTRZAlgorithm::operator=(HTRZAlgorithm const& rhs)
 {
-  mode_                = rhs.mode_               ;
-  stub_accept_policy_  = rhs.stub_accept_policy_ ;
-  nbins_z0_            = rhs.nbins_z0_           ;
-  nbins_cotantheta_    = rhs.nbins_cotantheta_   ;
-  max_z0_              = rhs.max_z0_             ;
-  min_z0_              = rhs.min_z0_             ;
-  max_cotantheta_      = rhs.max_cotantheta_     ;
-  min_cotantheta_      = rhs.min_cotantheta_     ;
+  mode_                = rhs.mode_                ;
+  stub_accept_policy_  = rhs.stub_accept_policy_  ;
+  verbose_             = rhs.verbose_             ;
+  nbins_z0_            = rhs.nbins_z0_            ;
+  nbins_cotantheta_    = rhs.nbins_cotantheta_    ;
+  threshold_all_layers_= rhs.threshold_all_layers_;
+  threshold_ps_layers_ = rhs.threshold_ps_layers_ ;
+  max_z0_              = rhs.max_z0_              ;
+  min_z0_              = rhs.min_z0_              ;
+  max_cotantheta_      = rhs.max_cotantheta_      ;
+  min_cotantheta_      = rhs.min_cotantheta_      ;
 
   assert(max_z0_         >= min_z0_        );
   assert(max_cotantheta_ >= min_cotantheta_);
+
+  ht_bounds_cotantheta_ = rhs.ht_bounds_cotantheta_;
+  ht_bounds_z0_         = rhs.ht_bounds_z0_        ;
 
   return *this;
 }
 
 HTRZAlgorithm& HTRZAlgorithm::operator=(HTRZAlgorithm&&      rhs)
 {
-  mode_                = rhs.mode_               ;
-  stub_accept_policy_  = rhs.stub_accept_policy_ ;
-  nbins_z0_            = rhs.nbins_z0_           ;
-  nbins_cotantheta_    = rhs.nbins_cotantheta_   ;
-  max_z0_              = rhs.max_z0_             ;
-  min_z0_              = rhs.min_z0_             ;
-  max_cotantheta_      = rhs.max_cotantheta_     ;
-  min_cotantheta_      = rhs.min_cotantheta_     ;
+  mode_                = rhs.mode_                ;
+  stub_accept_policy_  = rhs.stub_accept_policy_  ;
+  verbose_             = rhs.verbose_             ;
+  nbins_z0_            = rhs.nbins_z0_            ;
+  nbins_cotantheta_    = rhs.nbins_cotantheta_    ;
+  threshold_all_layers_= rhs.threshold_all_layers_;
+  threshold_ps_layers_ = rhs.threshold_ps_layers_ ;
+  max_z0_              = rhs.max_z0_              ;
+  min_z0_              = rhs.min_z0_              ;
+  max_cotantheta_      = rhs.max_cotantheta_      ;
+  min_cotantheta_      = rhs.min_cotantheta_      ;
 
   assert(max_z0_         >= min_z0_        );
   assert(max_cotantheta_ >= min_cotantheta_);
+
+  ht_bounds_cotantheta_ = std::move(rhs.ht_bounds_cotantheta_);
+  ht_bounds_z0_         = std::move(rhs.ht_bounds_z0_        );
 
   return *this;
 }
@@ -110,6 +157,69 @@ HTRZAlgorithm& HTRZAlgorithm::operator=(HTRZAlgorithm&&      rhs)
 HTRZAlgorithm::~HTRZAlgorithm()
 {
   
+}
+
+
+void HTRZAlgorithm::LoadConfig(HTRZAlgorithmConfig const& config)
+{
+  mode_                 = config.mode                ;
+  stub_accept_policy_   = config.stub_accept_policy  ;
+  verbose_              = config.verbose             ;
+  nbins_z0_             = config.nbins_z0            ;
+  nbins_cotantheta_     = config.nbins_cotantheta    ;
+  threshold_all_layers_ = config.threshold_all_layers;
+  threshold_ps_layers_  = config.threshold_ps_layers ;
+  max_z0_               = config.max_z0              ;
+  min_z0_               = config.min_z0              ;
+  max_cotantheta_       = config.max_cotantheta      ;
+  min_cotantheta_       = config.min_cotantheta      ;
+
+  assert(max_z0_         >= min_z0_        );
+  assert(max_cotantheta_ >= min_cotantheta_);
+
+  RegenerateBoundaries();
+}
+
+
+
+void HTRZAlgorithm::RegenerateBoundariesCotanTheta()
+{
+  
+        // Generate boundary vectors
+
+  for (unsigned iCot = 0; iCot < nbins_cotantheta_ + 1; ++iCot)
+  {
+    ht_bounds_cotantheta_.push_back( min_cotantheta_ + (max_cotantheta_ - min_cotantheta_) * double(iCot)/double(nbins_cotantheta_) );
+  }
+
+  
+  if (verbose_ >= 1)
+  {
+    std::cout << "New bounds in cotan theta = [";
+    for (auto val : ht_bounds_cotantheta_)
+    {
+      std::cout << val << ",";
+    }
+    std::cout << "]" << std::endl;
+  }
+}
+
+void HTRZAlgorithm::RegenerateBoundariesZ0()
+{
+  for (unsigned iZ0 = 0; iZ0 < nbins_z0_ + 1; ++iZ0)
+  {
+    ht_bounds_z0_.push_back( min_z0_ * (double(nbins_z0_ - iZ0)/double(nbins_z0_)) + max_z0_ * (double(iZ0)/double(nbins_z0_)) );
+  }
+  
+  if (verbose_ >= 1)
+  {
+    std::cout << "New bounds in z0 = [";
+    for (auto val : ht_bounds_z0_)
+    {
+      std::cout << val << ",";
+    }
+    std::cout << "]" << std::endl;
+  }
 }
 
 
@@ -122,31 +232,17 @@ struct HTRZCell
 
 
 
-
 unsigned int count_stubs_all_layers(HTRZCell const& cell)
 {
-  
-//   std::cerr << "call to majority_all_layers" << std::endl;
-  
   unsigned int count = 0;
   
   for (unsigned int i = 0; i < HTRZAlgorithm::NLAYERS; ++i)
   {
-//     std::cerr << "Layer " << i << " stubrefs vector size = " << cell.stubrefs_by_layer[i].size()  << std::endl;
-    
     if (!cell.stubrefs_by_layer[i].empty())
     {
-//       std::cerr << "count = " << count << std::endl;
       ++count;
     }
   }
-  
-//   for (auto const& layer : cell.stubrefs_by_layer)
-//     if (!layer.empty())
-//     {
-//       std::cerr << "count = " << count << std::endl;
-//       ++count;
-//     }
   
   return count;
 }
@@ -156,8 +252,12 @@ unsigned int count_stubs_ps_layers(HTRZCell const& cell)
   unsigned int count = 0;
   
   for (unsigned int i = 0; i < 3; ++i)
+  {
     if (!cell.stubrefs_by_layer[i].empty())
+    {
       ++count;
+    }
+  }
   
   return count;
 }
@@ -175,60 +275,11 @@ bool majority_ps_layers(HTRZCell const& cell, unsigned int const threshold)
 
 
 
-
-// // See SFINAE (template Substitution Failure Is Not An Error) documentation
-// template<typename Container>
-// using IteratorCategoryOf = typename std::iterator_traits<typename Container::iterator>::iterator_category;
-// 
-// template<typename Container>
-// using HaveRandomAccessIterator = std::is_base_of<std::random_access_iterator_tag, IteratorCategoryOf<Container> >;
-// 
-// 
-// // template<typename Iterator>
-// // using IsRandomAccessIterator = std::is_base_of<std::random_access_iterator_tag, Iterator >;
-// 
-// 
-// template<typename T,
-//          typename Container,
-//          typename std::enable_if<HaveRandomAccessIterator<Container>::value>::type * = nullptr>
-// std::size_t find_bin(Container const& bin_edges)
-// {
-//   std::size_t n_edges = bin_edges.size();
-// }
-
-
-
-
-// template< typename T,
-//           template <typename, typename = std::allocator<T > > class Container
-// >
-// static bool find_bin_from_sorted_edges(Container<T> const& bin_edges, T value, std::size_t& size_output_argument)
-// {
-//   std::size_t const n_edges = bin_edges.size();
-//   
-//   if (value < bin_edges.front() || bin_edges.back() <= value)
-//     return false;
-//   
-//   
-//   
-//   return n_edges;
-// }
-
-
 constexpr static const double lut_pixel_halfwidth_z_bylayer[] = {0.0722812068078, 0.0722812068078, 0.0722812068078, 2.5125007629395, 2.5125007629395, 2.5125007629395};
 
 
 TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader const& reader)
 {
-//   std::cerr 
-//     << "In road nstubs: " 
-//       << input_road.stubRefs.at(0).size() << " "
-//       << input_road.stubRefs.at(1).size() << " "
-//       << input_road.stubRefs.at(2).size() << " "
-//       << input_road.stubRefs.at(3).size() << " "
-//       << input_road.stubRefs.at(4).size() << " "
-//       << input_road.stubRefs.at(5).size() << " ";
-  
   TTRoad output_road;
   
   std::unordered_set<unsigned int> passing_stubrefs;
@@ -240,39 +291,8 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
         // Instantiate 2D HT matrix (x = cotan theta, y = z0)
         boost::multi_array<HTRZCell, 2> ht_matrix(boost::extents[nbins_cotantheta_][nbins_z0_]);
 
-        // Generate boundary vectors
-        std::vector<double> ht_bounds_cotantheta;
-        std::vector<double> ht_bounds_z0;
-
-        for (unsigned iCot = 0; iCot < nbins_cotantheta_ + 1; ++iCot)
-        {
-//           ht_bounds_cotantheta.push_back( min_cotantheta_ * (double(nbins_cotantheta_ - iCot)/double(nbins_cotantheta_)) + max_cotantheta_ * (double(iCot)/double(nbins_cotantheta_)) );
-          ht_bounds_cotantheta.push_back( min_cotantheta_ + (max_cotantheta_ - min_cotantheta_) * double(iCot)/double(nbins_cotantheta_) );
-        }
-
-        for (unsigned iZ0 = 0; iZ0 < nbins_z0_ + 1; ++iZ0)
-        {
-          ht_bounds_z0.push_back( min_z0_ * (double(nbins_z0_ - iZ0)/double(nbins_z0_)) + max_z0_ * (double(iZ0)/double(nbins_z0_)) );
-        }
-        
-//         std::cerr << "Bounds in cot theta = [";
-//         for (auto val : ht_bounds_cotantheta)
-//         {
-//           std::cerr << val << ",";
-//         }
-//         std::cerr << "]" << std::endl;
-//         
-//         
-//         std::cerr << "Bounds in z0 = [";
-//         for (auto val : ht_bounds_z0)
-//         {
-//           std::cerr << val << ",";
-//         }
-//         std::cerr << "]" << std::endl;
-        
-
         // The way we build the boundaries vectors makes them sorted in an increasing value order, no duplicates
-
+        
         // There is 1 superstrip per layer
         for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)
         {
@@ -299,25 +319,24 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
             std::vector< std::vector< unsigned int> > bound_iZ0    (nbins_cotantheta_ + 1,  std::vector<unsigned>());
             
             
-            
             // Loop on the (nbins_cotantheta_ + 1) bin edges
             for (unsigned iCot = 0; iCot < nbins_cotantheta_ + 1; ++iCot)
             {
-              double const z0_lo = stub_and_cotantheta_to_z0(stub_z - lut_pixel_halfwidth_z_bylayer[iLayer], stub_r, ht_bounds_cotantheta[iCot]);
-              double const z0_hi = stub_and_cotantheta_to_z0(stub_z + lut_pixel_halfwidth_z_bylayer[iLayer], stub_r, ht_bounds_cotantheta[iCot]);
+              double const z0_lo = stub_and_cotantheta_to_z0(stub_z - lut_pixel_halfwidth_z_bylayer[iLayer], stub_r, ht_bounds_cotantheta_[iCot]);
+              double const z0_hi = stub_and_cotantheta_to_z0(stub_z + lut_pixel_halfwidth_z_bylayer[iLayer], stub_r, ht_bounds_cotantheta_[iCot]);
               
 //               std::cerr << "z0_lo = " << std::fixed << std::setprecision(4) << std::showpoint << std::showpos << std::setw(10) << z0_lo << "  z0_hi = " << std::fixed << std::setprecision(4) << std::showpoint << std::showpos << std::setw(10) << z0_hi << std::endl;
+//               std::cerr << "stub_z " << stub_z << " stub_r " << stub_r << " cotan theta bound " << iCot << " with value " << ht_bounds_cotantheta_[iCot] << " ---> " << z0 << std::endl;
+              
               assert(z0_lo < z0_hi);
               
-//               std::cerr << "stub_z " << stub_z << " stub_r " << stub_r << " cotan theta bound " << iCot << " with value " << ht_bounds_cotantheta[iCot] << " ---> " << z0 << std::endl;
-              
-              if      (z0_hi <= ht_bounds_z0.front())
+              if      (z0_hi <= ht_bounds_z0_.front())
               {
                 // The z0 at this column falls out of the bottom of the matrix
                 bound_accept[iCot] = false;
 //                 std::cerr << "REJECTED z0_lo = " << z0_lo << "  z0_hi = " << z0_hi << std::endl;
               }
-              else if (z0_lo >= ht_bounds_z0.back() )
+              else if (z0_lo >= ht_bounds_z0_.back() )
               {
                 // The z0 at this column falls out of the top of the matrix
                 bound_accept[iCot] = false;
@@ -327,36 +346,11 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
               {
                 // We are inside the matrix in the vertical direction
                 
-//                 unsigned int const iZ0_lo = z0_lo <= ht_bounds_z0.front() ? 0 : 
-//                 (
-//                   z0_lo >= ht_bounds_z0.back() ? nbins_z0_ - 1 : 
-//                     std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_lo) )
-//                 );
-//                 
-//                 unsigned int const iZ0_hi = z0_hi <= ht_bounds_z0.front() ? 0 : 
-//                 (
-//                   z0_hi >= ht_bounds_z0.back() ? nbins_z0_ - 1 : 
-//                     std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_hi) )
-//                 );
+                unsigned int const iZ0_lo = z0_lo <= ht_bounds_z0_.front() ? 0             : std::distance(ht_bounds_z0_.begin(), std::lower_bound(ht_bounds_z0_.begin(), ht_bounds_z0_.end(), z0_lo) ) - 1;
                 
-//                 unsigned int const iZ0_lo;
-//                 unsigned int const iZ0_hi;
+                unsigned int const iZ0_hi = z0_hi >= ht_bounds_z0_.back()  ? nbins_z0_ - 1 : std::distance(ht_bounds_z0_.begin(), std::lower_bound(ht_bounds_z0_.begin(), ht_bounds_z0_.end(), z0_hi) ) - 1;
                 
-                unsigned int const iZ0_lo = z0_lo <= ht_bounds_z0.front() ? 0             : std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_lo) ) - 1;
-                
-                unsigned int const iZ0_hi = z0_hi >= ht_bounds_z0.back()  ? nbins_z0_ - 1 : std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_hi) ) - 1;
-                
-                
-//                 std::cerr << "ACCEPTED z0_lo = " << z0_lo << "  z0_hi = " << z0_hi << "  iZ0_lo = " << iZ0_lo << "  iZ0_hi = " << iZ0_hi << std::endl;
-//                 std::cerr << "std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_lo) ) = " << std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_lo) ) << std::endl;
-//                 std::cerr << "std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_hi) ) = " << std::distance(ht_bounds_z0.begin(), std::lower_bound(ht_bounds_z0.begin(), ht_bounds_z0.end(), z0_hi) ) << std::endl;
-//                 
-//                 std::cerr << "BOUNDS: " << std::endl;
-//                 for (double bound_z0 : ht_bounds_z0)
-//                 {
-//                   std::cerr << bound_z0 << " ";
-//                 }
-//                 std::cerr << std::endl;
+//                 std::cerr << "ACCEPTED z0_lo = " << z0_lo << "  z0_hi = " << z0_hi << "  iZ0_lo = " << iZ0_lo << "  iZ0_hi = " << iZ0_hi << std::endl;B
                 
                 assert(iZ0_lo <= iZ0_hi);
                 
@@ -369,7 +363,9 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
                 bound_accept[iCot] = true;
                 
                 for (unsigned int iZ0 = iZ0_lo; iZ0 <= iZ0_hi; ++iZ0)
+                {
                   bound_iZ0[iCot].push_back(iZ0);
+                }
                 
                 assert(!bound_iZ0[iCot].empty());
               }
@@ -391,6 +387,7 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
               else if (bound_accept[iCot] && bound_accept[iCot + 1])
               {
 //                 std::cerr << " both borders valid --> accept " << std::endl;
+                
                 // Both borders are valid, save as many cells as are crossed by the line
 //                 if (bound_iZ0[iCot] <= bound_iZ0[iCot + 1])
 //                   for (unsigned iZ0 = bound_iZ0[iCot]; iZ0 < bound_iZ0[iCot + 1] + 1; ++iZ0)
@@ -474,27 +471,83 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
         
         // Diagnostic print of the HT matrix
         
-        std::cerr << std::endl << "HT Matrix for this road:" << std::endl;
+        std::cerr << std::endl << "HT Matrix of road from pattern "<< input_road.patternRef << ":" << std::endl;
         
         for (unsigned int iZ0 = 0; iZ0 < nbins_z0_; ++iZ0)
         {
           for (unsigned int iCot = 0; iCot < nbins_cotantheta_; ++iCot)
           {
-            if ( majority_all_layers( ht_matrix[iCot][iZ0], threshold_all_layers_) && majority_ps_layers(ht_matrix[iCot][iZ0], threshold_ps_layers_) )
+            std::string color_str_begin = "";
+            std::string color_str_end   = "";
+            
+            unsigned const count_all_lay = count_stubs_all_layers( ht_matrix[iCot][iZ0] );
+            unsigned const count_ps_lay  = count_stubs_ps_layers ( ht_matrix[iCot][iZ0] );
+            
+            bool const maj_all_lay = count_all_lay >= threshold_all_layers_;
+            bool const maj_ps_lay  = count_ps_lay  >= threshold_ps_layers_ ;
+            
+            
             {
-              std::cerr << "\033[1;31m" << count_stubs_all_layers(ht_matrix[iCot][iZ0]) << "\033[0m";
+              if (count_all_lay == 0)
+              {
+                color_str_begin = "\033[2;37m"; // FAINT GREY
+                color_str_end   = "\033[0m";
+              }
+              else
+              {
+                switch (maj_all_lay)
+                {
+                  case true:
+                  {
+                    switch (maj_ps_lay)
+                    {
+                      case 1:
+                        color_str_begin = "\033[1;31m"; // BOLD RED
+                        color_str_end   = "\033[0m";
+                        break;
+                      case 0:
+                        color_str_begin = "\033[1;32m"; // BOLD GREEN
+                        color_str_end   = "\033[0m";
+                        break;
+                      default:
+                        break;
+                    }
+                  }
+                    break;
+                  
+                  case false:
+                  {
+                    switch (maj_ps_lay)
+                    {
+                      case 1:
+                        color_str_begin = "\033[1;33m"; //BOLD YELLOW
+                        color_str_end   = "\033[0m";
+                        
+                        break;
+                      case 0:
+                        color_str_begin = ""; //NO COLOR
+                        color_str_end   = "";
+                        break;
+                      default:
+                        break;
+                    }
+                  }
+                    break;
+                  
+                  default:
+                    break;
+                }
+              }
             }
-            else
-            {
-              std::cerr << count_stubs_all_layers(ht_matrix[iCot][iZ0]);
-            }
+            
+            std::cerr << color_str_begin << count_all_lay << color_str_end;
           }
           
           std::cerr << std::endl;
         }
         
         
-        // Loop over the matrix cells and take note of stubrefs in cells activated my the majority logic
+        // Loop over the matrix cells and take note of stubrefs in cells activated by the majority logic
         for (unsigned int iCot = 0; iCot < nbins_cotantheta_; ++iCot)
           for (unsigned int iZ0 = 0; iZ0 < nbins_z0_; ++iZ0)
             if ( majority_all_layers( ht_matrix[iCot][iZ0], threshold_all_layers_) && majority_ps_layers(ht_matrix[iCot][iZ0], threshold_ps_layers_) )
@@ -525,33 +578,63 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
   for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)
   {
     output_road.stubRefs.push_back( std::vector<unsigned>() );
-    
-    std::cerr << "Passing stubrefs in layer " << iLayer << ": ";
     for (unsigned int const in_stubref : input_road.stubRefs[iLayer])
     {
       if (passing_stubrefs.find(in_stubref) != passing_stubrefs.end())
       {
-        std::cerr << in_stubref << " ";
         output_road.stubRefs[iLayer].push_back(in_stubref);
       }
     }
-    std::cerr << std::endl;
   }
   
   
   output_road.nstubs = passing_stubrefs.size();
   
-//   std::cerr 
-//     << "    Out road nstubs: " 
-//       << output_road.stubRefs.at(0).size() << " "
-//       << output_road.stubRefs.at(1).size() << " "
-//       << output_road.stubRefs.at(2).size() << " "
-//       << output_road.stubRefs.at(3).size() << " "
-//       << output_road.stubRefs.at(4).size() << " "
-//       << output_road.stubRefs.at(5).size() << " ";
-//   
-//   std::cerr 
-//       << std::endl;
+  
+  if (verbose_ >= 1)
+  {
+    std::cout << "Number of stubs by layer for this road: ";
+    for (auto& stubRefVec : output_road.stubRefs)
+    {
+      std::cout << stubRefVec.size() << " ";
+    }
+    std::cout << std::endl;
+    
+    if (verbose_ >= 2)
+    {
+      std::cout << "Passing stubrefs in: ";
+      for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)
+      {
+        std::cout << "layer " << iLayer << " ( ";
+        for (unsigned int const in_stubref : input_road.stubRefs[iLayer])
+        {
+          if (passing_stubrefs.find(in_stubref) != passing_stubrefs.end())
+          {
+            std::cout << in_stubref << " ";
+          }
+        }
+        std::cout << ")  ";
+      }
+      std::cout << std::endl;
+      
+      
+      std::cout << "Failing stubrefs in: ";
+      for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)
+      {
+        output_road.stubRefs.push_back( std::vector<unsigned>() );
+        std::cout << "layer " << iLayer << " ( ";
+        for (unsigned int const in_stubref : input_road.stubRefs[iLayer])
+        {
+          if (passing_stubrefs.find(in_stubref) == passing_stubrefs.end())
+          {
+            std::cout << in_stubref << " ";
+          }
+        }
+        std::cout << ")  ";
+      }
+      std::cout << std::endl;
+    }
+  }
   
   return output_road;
 }

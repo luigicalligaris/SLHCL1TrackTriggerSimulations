@@ -103,6 +103,18 @@ int main(int argc, char **argv) {
         ("maxStubs"     , po::value<int>(&option.maxStubs)->default_value(999999999), "Specfiy max number of stubs per superstrip")
         ("maxRoads"     , po::value<int>(&option.maxRoads)->default_value(999999999), "Specfiy max number of roads per event")
 
+        // Only for r-z Hough Transform
+        ("htRZMode"              , po::value<std::string>(&option.htRZMode              )->default_value( "LOOSE_ALL_NEIGHBOURS"  ), "Specify the type of HT algorithm to use")
+        ("htRZStubAcceptPolicy"  , po::value<std::string>(&option.htRZStubAcceptPolicy  )->default_value( "HTRZ_2D_COTANTHETA_Z0" ), "Specify the policy for stub acceptance into cells, following compatibility at their boundaries")
+        ("htRZCotanThetaBins"    , po::value<unsigned   >(&option.htRZCotanThetaBins    )->default_value(    64 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
+        ("htRZZ0Bins"            , po::value<unsigned   >(&option.htRZZ0Bins            )->default_value(     8 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
+        ("htRZThresholdLayerAll" , po::value<unsigned   >(&option.htRZThresholdLayerAll )->default_value(     4 ), "Specify the threshold # of observed PS+2S layers for HT cell activation")
+        ("htRZThresholdLayerPS"  , po::value<unsigned   >(&option.htRZThresholdLayerPS  )->default_value(     2 ), "Specify the threshold # of observed PS layers for HT cell activation")
+        ("htRZCotanThetaMin"     , po::value<float      >(&option.htRZCotanThetaMin     )->default_value(   1.5 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
+        ("htRZCotanThetaMax"     , po::value<float      >(&option.htRZCotanThetaMax     )->default_value(  -1.0 ), "Specify the maximum value of cotan(theta) at the edge of the HT matrix")
+        ("htRZZ0Min"             , po::value<float      >(&option.htRZZ0Min             )->default_value( -15.0 ), "Specify the minimum value of z0 at the edge of the HT matrix")
+        ("htRZZ0Max"             , po::value<float      >(&option.htRZZ0Max             )->default_value(  15.0 ), "Specify the maximum value of z0 at the edge of the HT matrix")
+
         // Only for matrix building
         ("view"         , po::value<std::string>(&option.view)->default_value("XYZ"), "Specify fit view (e.g. XYZ, XY, RZ)")
         ("hitBits"      , po::value<unsigned>(&option.hitBits)->default_value(0), "Specify hit bits (0: all hit, 1: miss layer 1, ..., 6: miss layer 6)")
@@ -113,16 +125,16 @@ int main(int argc, char **argv) {
         ("maxCombs"     , po::value<int>(&option.maxCombs)->default_value(999999999), "Specfiy max number of combinations per road")
         ("maxTracks"    , po::value<int>(&option.maxTracks)->default_value(999999999), "Specfiy max number of tracks per event")
 
-	// Only for Duplicate Flag
+        // Only for Duplicate Flag
         ("rmDuplicate", po::value<int>(&option.rmDuplicate)->default_value(-1), "Duplicate removal option. The argument is the number of max stubs allowed to be shared between AM tracks")
 
-	// Only for parameter-based duplicate removal
-	("rmParDuplicate", po::bool_switch(&option.rmParDuplicate)->default_value(false), "Parameter-based duplicate removal switch")
+        // Only for parameter-based duplicate removal
+        ("rmParDuplicate", po::bool_switch(&option.rmParDuplicate)->default_value(false), "Parameter-based duplicate removal switch")
 
-	//Only for alternative combination builder configuration
-	("FiveOfSix", po::bool_switch(&option.FiveOfSix)->default_value(false), "Do all 5/6 permutations of 6/6 roads in addition")
-	("PDDS", po::bool_switch(&option.PDDS)->default_value(false), "Switch on pairwise Delta Delta S combination cleaning")
-	
+        //Only for alternative combination builder configuration
+        ("FiveOfSix", po::bool_switch(&option.FiveOfSix)->default_value(false), "Do all 5/6 permutations of 6/6 roads in addition")
+        ("PDDS", po::bool_switch(&option.PDDS)->default_value(false), "Switch on pairwise Delta Delta S combination cleaning")
+
         // Only for NTupleMaker
         ("no-trim"      , po::bool_switch(&option.no_trim)->default_value(false), "Do not trim ntuple branches")
         ;

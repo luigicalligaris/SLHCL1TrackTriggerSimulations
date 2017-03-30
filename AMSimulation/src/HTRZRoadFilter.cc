@@ -150,7 +150,7 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
     for (unsigned iroad = 0; iroad < nroads; ++iroad)
     {
       
-      std::cerr << "analyzing road " << iroad << std::endl;
+      std::cout << "analyzing road " << iroad << std::endl;
       
       if (iroad >= (unsigned) po_.maxRoads)
         break;
@@ -168,12 +168,12 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
           algo_config.min_z0                =                 -15.0 ;
 //           algo_config.max_cotantheta        =                 +13.5 ;
 //           algo_config.min_cotantheta        =                 -13.5 ;
-          algo_config.max_cotantheta        =                  +3.0 ;
-          algo_config.min_cotantheta        =                  -3.0 ;
-          algo_config.nbins_z0              =                    16 ;
-          algo_config.nbins_cotantheta      =                    64 ;
-          algo_config.threshold_all_layers  =                     4 ;
-          algo_config.threshold_ps_layers   =                     1 ;
+          algo_config.max_cotantheta        =                  +1.5 ;
+          algo_config.min_cotantheta        =                  -1.0 ;
+          algo_config.nbins_z0              =                    8 ;
+          algo_config.nbins_cotantheta      =                    32 ;
+          algo_config.threshold_all_layers  =                     5 ;
+          algo_config.threshold_ps_layers   =                     2 ;
           
           HTRZAlgorithm algo(algo_config);
           
@@ -236,7 +236,7 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename) {
 
   if (verbose_)
   {
-    std::cout << Info() << Form("Events Read: %7ld, triggered: %7ld   Roads Read: %7ld, triggered: %7ld", nEvtRead, nEvtKept, nRoadRead, nRoadKept) << std::endl;
+    std::cout << Info() << Form("Events Read: %7ld, triggered: %7ld   Roads Read: %7ld, passing: %7ld", nEvtRead, nEvtKept, nRoadRead, nRoadKept) << std::endl;
   }
 
   long long const nentries = writer.writeTree();

@@ -45,6 +45,17 @@ struct ProgramOption {
     int         maxStubs;
     int         maxRoads;
 
+    std::string htRZMode             ;
+    std::string htRZStubAcceptPolicy ;
+    unsigned    htRZCotanThetaBins   ;
+    unsigned    htRZZ0Bins           ;
+    unsigned    htRZThresholdLayerAll;
+    unsigned    htRZThresholdLayerPS ;
+    float       htRZCotanThetaMin    ;
+    float       htRZCotanThetaMax    ;
+    float       htRZZ0Min            ;
+    float       htRZZ0Max            ;
+
     std::string view;
     unsigned    hitBits;
 
