@@ -84,13 +84,13 @@ public:
   static constexpr const unsigned NLAYERS = 6;
   
   HTRZAlgorithm();
-  HTRZAlgorithm(HTRZAlgorithmConfig const& config);
   HTRZAlgorithm(HTRZAlgorithm const& rhs);
   HTRZAlgorithm(HTRZAlgorithm&&      rhs);
   HTRZAlgorithm& operator=(HTRZAlgorithm const& rhs);
   HTRZAlgorithm& operator=(HTRZAlgorithm&&      rhs);
   ~HTRZAlgorithm();
 
+  HTRZAlgorithm(HTRZAlgorithmConfig const& config);
   void LoadConfig(HTRZAlgorithmConfig const& config);
 
   slhcl1tt::TTRoad Filter(slhcl1tt::TTRoad const& input_road, slhcl1tt::TTRoadReader const& reader);
@@ -112,19 +112,7 @@ private:
   inline void RegenerateBoundaries(){RegenerateBoundariesCotanTheta(); RegenerateBoundariesZ0();}
 
 private:
-  HTRZAlgorithm_mode_t               mode_              ;
-  HTRZAlgorithm_stub_accept_policy_t stub_accept_policy_;
-
-  int      verbose_;
-
-  unsigned nbins_z0_             ;
-  unsigned nbins_cotantheta_     ;
-  unsigned threshold_all_layers_ ;
-  unsigned threshold_ps_layers_  ;
-  double   max_z0_               ;
-  double   min_z0_               ;
-  double   max_cotantheta_       ;
-  double   min_cotantheta_       ;
+  HTRZAlgorithmConfig config_;
 
   std::vector<double> ht_bounds_cotantheta_;
   std::vector<double> ht_bounds_z0_;
