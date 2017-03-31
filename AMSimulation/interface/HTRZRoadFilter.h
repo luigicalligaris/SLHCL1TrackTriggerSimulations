@@ -35,23 +35,14 @@ class HTRZRoadFilter {
     int filterRoads(TString src, TString out);
 
   private:
-    enum mode_t {NULL_ALGO = 0, FILTER_ROADS = 1};
-    mode_t mode_;
-
-    // Order of members should be smaller to bigger (refer to class members memory alignment)
-
-    // Program options
-    int                     verbose_   ;
-    long long               maxEvents_ ;
-    slhcl1tt::ProgramOption po_        ;
-
     // Configurations
     TString  readRoadPrefix_ ;
     TString  readRoadSuffix_ ;
     TString writeRoadPrefix_ ;
     TString writeRoadSuffix_ ;
 
-
+    // Program options
+    slhcl1tt::ProgramOption po_;
 };
 
 #endif

@@ -227,6 +227,10 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
   
   switch (config_.mode)
   {
+    case NULL_ALGO:
+      output_road = input_road;
+      break;
+    
     case HTRZ_2D_COTANTHETA_Z0:
       {
         // Instantiate 2D HT matrix (x = cotan theta, y = z0)

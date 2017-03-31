@@ -104,8 +104,8 @@ int main(int argc, char **argv) {
         ("maxRoads"     , po::value<int>(&option.maxRoads)->default_value(999999999), "Specfiy max number of roads per event")
 
         // Only for r-z Hough Transform
-        ("htRZMode"              , po::value<std::string>(&option.htRZMode              )->default_value( "LOOSE_ALL_NEIGHBOURS"  ), "Specify the type of HT algorithm to use")
-        ("htRZStubAcceptPolicy"  , po::value<std::string>(&option.htRZStubAcceptPolicy  )->default_value( "HTRZ_2D_COTANTHETA_Z0" ), "Specify the policy for stub acceptance into cells, following compatibility at their boundaries")
+        ("htRZMode"              , po::value<std::string>(&option.htRZMode              )->default_value( "HTRZ_2D_COTANTHETA_Z0" ), "Specify the type of HT algorithm to use")
+        ("htRZStubAcceptPolicy"  , po::value<std::string>(&option.htRZStubAcceptPolicy  )->default_value( "LOOSE_ALL_NEIGHBOURS"  ), "Specify the policy for stub acceptance into cells, following compatibility at their boundaries")
         ("htRZCotanThetaBins"    , po::value<unsigned   >(&option.htRZCotanThetaBins    )->default_value(    64 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
         ("htRZZ0Bins"            , po::value<unsigned   >(&option.htRZZ0Bins            )->default_value(     8 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
         ("htRZThresholdLayerAll" , po::value<unsigned   >(&option.htRZThresholdLayerAll )->default_value(     4 ), "Specify the threshold # of observed PS+2S layers for HT cell activation")
