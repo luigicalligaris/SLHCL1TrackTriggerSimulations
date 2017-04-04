@@ -1,6 +1,7 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZRoadFilter.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZAlgorithm.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulationIO/interface/TTRoadReader.h"
+#include "SLHCL1TrackTriggerSimulations/AMSimulationIO/interface/Helper.h"
 
 using namespace slhcl1tt;
 
@@ -94,14 +95,16 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
 {
   // For reading
   TTRoadReader reader(po_.verbose);
-  if (reader.init(inputfilename, readRoadPrefix_, readRoadSuffix_)) {
+  if (reader.init(inputfilename, readRoadPrefix_, readRoadSuffix_))
+  {
     std::cout << Error() << "Failed to initialize TTRoadReader." << std::endl;
     return 1;
   }
 
   // For writing
   TTRoadWriter writer(po_.verbose);
-  if (writer.init(reader.getChain(), outputfilename, writeRoadPrefix_, writeRoadSuffix_)) {
+  if (writer.init(reader.getChain(), outputfilename, writeRoadPrefix_, writeRoadSuffix_))
+  {
     std::cout << Error() << "Failed to initialize TTRoadWriter." << std::endl;
     return 1;
   }
@@ -119,19 +122,46 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
   // Set-up HT algo
 
   HTRZAlgorithmConfig algo_config;
-  algo_config.mode                  = HTRZ_2D_COTANTHETA_Z0 ;
-  algo_config.stub_accept_policy    = LOOSE_ALL_NEIGHBOURS  ;
-  algo_config.verbose               =                     1 ;
-  algo_config.max_z0                =                 +15.0 ;
-  algo_config.min_z0                =                 -15.0 ;
+  
+  
+  if      (po_.htRZMode == "HTRZ_2D_COTANTHETA_Z0")
+    algo_config.mode = HTRZ_2D_COTANTHETA_Z0 ;
+  else if (po_.htRZMode == "HTRZ_1D_COTANTHETA")
+    algo_config.mode = HTRZ_1D_COTANTHETA;
+  else // (po_.htRZMode == "NULL_ALGO")
+    algo_config.mode = NULL_ALGO;
+  
+  if      (po_.htRZStubAcceptPolicy == "MEDIUM_NEAR_NEIGHBOUR")
+    algo_config.stub_accept_policy = MEDIUM_NEAR_NEIGHBOUR;
+  else if (po_.htRZStubAcceptPolicy == "TIGHT_NO_NEIGHBOURS")
+    algo_config.stub_accept_policy = TIGHT_NO_NEIGHBOURS;
+  else // (po_.htRZStubAcceptPolicy == "LOOSE_ALL_NEIGHBOURS")
+    algo_config.stub_accept_policy = LOOSE_ALL_NEIGHBOURS ;
+  
+  
+//   algo_config.verbose               =                     1 ;
+//   algo_config.max_z0                =                 +15.0 ;
+//   algo_config.min_z0                =                 -15.0 ;
 //           algo_config.max_cotantheta        =                 +13.5 ;
 //           algo_config.min_cotantheta        =                 -13.5 ;
-  algo_config.max_cotantheta        =                  +1.5 ;
-  algo_config.min_cotantheta        =                  -1.0 ;
-  algo_config.nbins_z0              =                     8 ;
-  algo_config.nbins_cotantheta      =                     8 ;
-  algo_config.threshold_all_layers  =                     4 ;
-  algo_config.threshold_ps_layers   =                     1 ;
+//   algo_config.max_cotantheta        =                  +1.5 ;
+//   algo_config.min_cotantheta        =                  -1.0 ;
+//   algo_config.nbins_z0              =                     4 ;
+//   algo_config.nbins_cotantheta      =                    16 ;
+//   algo_config.threshold_all_layers  =                     4 ;
+//   algo_config.threshold_ps_layers   =                     1 ;
+  
+  algo_config.color_output          = IsColorEnabled();
+  algo_config.verbose               = po_.verbose               ;
+  algo_config.nbins_z0              = po_.htRZZ0Bins            ;
+  algo_config.nbins_cotantheta      = po_.htRZCotanThetaBins    ;
+  algo_config.threshold_all_layers  = po_.htRZThresholdLayerAll ;
+  algo_config.threshold_ps_layers   = po_.htRZThresholdLayerPS  ;
+  algo_config.min_cotantheta        = po_.htRZCotanThetaMin     ;
+  algo_config.max_cotantheta        = po_.htRZCotanThetaMax     ;
+  algo_config.min_z0                = po_.htRZZ0Min             ;
+  algo_config.max_z0                = po_.htRZZ0Max             ;
+  
   
   HTRZAlgorithm algo(algo_config);
 
@@ -142,21 +172,23 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
     if (reader.loadTree(ievt) < 0)
       break;
 
+    ++nEvtRead;
+
     reader.getEntry(ievt);
 
     const unsigned nroads = reader.vr_patternRef->size();
 
-    if (po_.verbose >= 1 && ievt % 100 == 0)
+    if (po_.verbose >= 2 && ievt % 100 == 0)
       std::cout << Debug() << Form("... Processing event: %7lld", ievt) << std::endl;
 
-    if (po_.verbose >= 2)
+    if (po_.verbose >= 3)
       std::cout << Debug() << "... evt: " << ievt << " # roads: " << nroads << std::endl;
 
     // Optimization: short circuit if no roads
     if (!nroads)
     {
       writer.fill(std::vector<TTRoad>());
-      ++nEvtRead;
+      ++nEvtKept;
       continue;
     }
   
@@ -193,8 +225,6 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
       ++nEvtKept;
       writer.fill(out_roads);
     }
-    
-    ++nEvtRead;
   }
   
   
@@ -205,9 +235,13 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
     return 1;
   }
   
-  if (po_.verbose)
+  if (po_.verbose >= 0)
   {
-    std::cout << Info() << Form("Events Read: %7ld, triggered: %7ld   Roads Read: %7ld, passing: %7ld", nEvtRead, nEvtKept, nRoadRead, nRoadKept) << std::endl;
+    std::cout << Info() << Form("Events Read: %7ld, triggered: %7ld   Roads Read: %7ld, passing: %7ld", nEvtRead, nEvtKept, nRoadRead, nRoadKept) << "   Road eff: ";
+    if (nRoadRead > 0)
+      std::cout << Form("%7f", double(nRoadKept)/double(nRoadRead)) << std::endl;
+    else
+      std::cout << "N/A" << std::endl;
   }
   
   long long const nentries = writer.writeTree();

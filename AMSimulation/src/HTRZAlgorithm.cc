@@ -134,7 +134,7 @@ void HTRZAlgorithm::RegenerateBoundariesCotanTheta()
   }
 
   
-  if (config_.verbose >= 2)
+  if (config_.verbose >= 4)
   {
     std::cout << "New bounds in cotan theta = [";
     for (auto val : ht_bounds_cotantheta_)
@@ -152,7 +152,7 @@ void HTRZAlgorithm::RegenerateBoundariesZ0()
     ht_bounds_z0_.push_back( config_.min_z0 * (double(config_.nbins_z0 - iZ0)/double(config_.nbins_z0)) + config_.max_z0 * (double(iZ0)/double(config_.nbins_z0)) );
   }
   
-  if (config_.verbose >= 2)
+  if (config_.verbose >= 4)
   {
     std::cout << "New bounds in z0 = [";
     for (auto val : ht_bounds_z0_)
@@ -402,7 +402,7 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
         
         // Diagnostic print of the HT matrix
         
-        if (config_.verbose >= 2)
+        if (config_.verbose >= 3)
         {
           std::cerr << std::endl << "HT Matrix of road from pattern "<< input_road.patternRef << ":" << std::endl;
           
@@ -420,6 +420,7 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
               bool const maj_ps_lay  = count_ps_lay  >= config_.threshold_ps_layers ;
               
               
+              if (config_.color_output)
               {
                 if (count_all_lay == 0)
                 {
@@ -524,7 +525,7 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
   output_road.nstubs = passing_stubrefs.size();
   
   
-  if (config_.verbose >= 1)
+  if (config_.verbose >= 4)
   {
     std::cout << "Number of stubs by layer for this road: ";
     for (auto& stubRefVec : output_road.stubRefs)
@@ -533,7 +534,7 @@ TTRoad HTRZAlgorithm::Filter(slhcl1tt::TTRoad const& input_road, TTRoadReader co
     }
     std::cout << std::endl;
     
-    if (config_.verbose >= 2)
+    if (config_.verbose >= 4)
     {
       std::cout << "Passing stubrefs in: ";
       for (unsigned iLayer = 0; iLayer < NLAYERS; ++iLayer)

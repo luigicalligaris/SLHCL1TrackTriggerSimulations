@@ -77,6 +77,11 @@ void NoColor() {
     g_useColor = false;
 }
 
+bool IsColorEnabled() {
+  return g_useColor;
+}
+
+
 void Timing(bool start) {
     static TStopwatch timer;
     if (g_useTimer) {

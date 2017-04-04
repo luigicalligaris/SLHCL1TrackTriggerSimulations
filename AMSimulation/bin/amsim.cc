@@ -106,12 +106,12 @@ int main(int argc, char **argv) {
         // Only for r-z Hough Transform
         ("htRZMode"              , po::value<std::string>(&option.htRZMode              )->default_value( "HTRZ_2D_COTANTHETA_Z0" ), "Specify the type of HT algorithm to use")
         ("htRZStubAcceptPolicy"  , po::value<std::string>(&option.htRZStubAcceptPolicy  )->default_value( "LOOSE_ALL_NEIGHBOURS"  ), "Specify the policy for stub acceptance into cells, following compatibility at their boundaries")
-        ("htRZCotanThetaBins"    , po::value<unsigned   >(&option.htRZCotanThetaBins    )->default_value(    64 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
         ("htRZZ0Bins"            , po::value<unsigned   >(&option.htRZZ0Bins            )->default_value(     8 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
+        ("htRZCotanThetaBins"    , po::value<unsigned   >(&option.htRZCotanThetaBins    )->default_value(    32 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
         ("htRZThresholdLayerAll" , po::value<unsigned   >(&option.htRZThresholdLayerAll )->default_value(     4 ), "Specify the threshold # of observed PS+2S layers for HT cell activation")
         ("htRZThresholdLayerPS"  , po::value<unsigned   >(&option.htRZThresholdLayerPS  )->default_value(     2 ), "Specify the threshold # of observed PS layers for HT cell activation")
-        ("htRZCotanThetaMin"     , po::value<float      >(&option.htRZCotanThetaMin     )->default_value(   1.5 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
-        ("htRZCotanThetaMax"     , po::value<float      >(&option.htRZCotanThetaMax     )->default_value(  -1.0 ), "Specify the maximum value of cotan(theta) at the edge of the HT matrix")
+        ("htRZCotanThetaMin"     , po::value<float      >(&option.htRZCotanThetaMin     )->default_value(  -1.0 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
+        ("htRZCotanThetaMax"     , po::value<float      >(&option.htRZCotanThetaMax     )->default_value(   1.5 ), "Specify the maximum value of cotan(theta) at the edge of the HT matrix")
         ("htRZZ0Min"             , po::value<float      >(&option.htRZZ0Min             )->default_value( -15.0 ), "Specify the minimum value of z0 at the edge of the HT matrix")
         ("htRZZ0Max"             , po::value<float      >(&option.htRZZ0Max             )->default_value(  15.0 ), "Specify the maximum value of z0 at the edge of the HT matrix")
 

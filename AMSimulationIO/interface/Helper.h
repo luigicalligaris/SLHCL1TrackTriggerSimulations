@@ -22,6 +22,7 @@ namespace slhcl1tt {
 TString Color(const TString& c);
 TString EndColor();
 void NoColor();
+bool IsColorEnabled();
 
 void Timing(bool start=false);
 void ShowTiming();
