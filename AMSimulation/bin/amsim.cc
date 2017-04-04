@@ -112,8 +112,9 @@ int main(int argc, char **argv) {
         ("htRZThresholdLayerPS"  , po::value<unsigned   >(&option.htRZThresholdLayerPS  )->default_value(     2 ), "Specify the threshold # of observed PS layers for HT cell activation")
         ("htRZCotanThetaMin"     , po::value<float      >(&option.htRZCotanThetaMin     )->default_value(  -1.0 ), "Specify the minimum value of cotan(theta) at the edge of the HT matrix")
         ("htRZCotanThetaMax"     , po::value<float      >(&option.htRZCotanThetaMax     )->default_value(   1.5 ), "Specify the maximum value of cotan(theta) at the edge of the HT matrix")
-        ("htRZZ0Min"             , po::value<float      >(&option.htRZZ0Min             )->default_value( -15.0 ), "Specify the minimum value of z0 at the edge of the HT matrix")
-        ("htRZZ0Max"             , po::value<float      >(&option.htRZZ0Max             )->default_value(  15.0 ), "Specify the maximum value of z0 at the edge of the HT matrix")
+        ("htRZZ0Min"             , po::value<float      >(&option.htRZZ0Min             )->default_value( -30.0 ), "Specify the minimum value of zT at the edge of the HT matrix")
+        ("htRZZ0Max"             , po::value<float      >(&option.htRZZ0Max             )->default_value(  30.0 ), "Specify the maximum value of zT at the edge of the HT matrix")
+        ("htRZTRadius"           , po::value<float      >(&option.htRZTRadius           )->default_value(   0.0 ), "Specify the reference radius T at which z is calculated (i.e. zT)")
 
         // Only for matrix building
         ("view"         , po::value<std::string>(&option.view)->default_value("XYZ"), "Specify fit view (e.g. XYZ, XY, RZ)")

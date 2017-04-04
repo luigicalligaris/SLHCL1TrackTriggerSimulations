@@ -126,6 +126,8 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
   
   if      (po_.htRZMode == "HTRZ_2D_COTANTHETA_Z0")
     algo_config.mode = HTRZ_2D_COTANTHETA_Z0 ;
+  else if (po_.htRZMode == "HTRZ_2D_COTANTHETA_ZT")
+    algo_config.mode = HTRZ_2D_COTANTHETA_ZT;
   else if (po_.htRZMode == "HTRZ_1D_COTANTHETA")
     algo_config.mode = HTRZ_1D_COTANTHETA;
   else // (po_.htRZMode == "NULL_ALGO")
@@ -161,6 +163,7 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
   algo_config.max_cotantheta        = po_.htRZCotanThetaMax     ;
   algo_config.min_z0                = po_.htRZZ0Min             ;
   algo_config.max_z0                = po_.htRZZ0Max             ;
+  algo_config.t_radius              = po_.htRZTRadius           ;
   
   
   HTRZAlgorithm algo(algo_config);

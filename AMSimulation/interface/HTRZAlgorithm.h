@@ -7,7 +7,7 @@
 #include <vector>
 
 // 2D HT matrix or 1D histogram?
-enum HTRZAlgorithm_mode_t {NULL_ALGO, HTRZ_2D_COTANTHETA_Z0, HTRZ_1D_COTANTHETA};
+enum HTRZAlgorithm_mode_t {NULL_ALGO, HTRZ_2D_COTANTHETA_Z0, HTRZ_2D_COTANTHETA_ZT, HTRZ_1D_COTANTHETA};
 enum HTRZAlgorithm_stub_accept_policy_t {LOOSE_ALL_NEIGHBOURS, MEDIUM_NEAR_NEIGHBOUR, TIGHT_NO_NEIGHBOURS};
 
 struct HTRZAlgorithmConfig
@@ -24,6 +24,7 @@ struct HTRZAlgorithmConfig
   double                             min_z0               ;
   double                             max_cotantheta       ;
   double                             min_cotantheta       ;
+  double                             t_radius             ;
 };
 
 
@@ -106,7 +107,20 @@ private:
     return (zstub - z0) / rstub;
   }
 
+
+  inline double stub_and_cotantheta_to_zT(double const t_radius, double const zstub, double const rstub, double const cotantheta) const noexcept
+  {
+    return zstub - (rstub - t_radius) * cotantheta;
+  }
+
+  inline double stub_and_zT_to_cotantheta(double const t_radius, double const zstub, double const rstub, double const zT) const noexcept
+  {
+    assert(rstub != t_radius);
+    return (zstub - zT) / (rstub - t_radius);
+  }
+
   void RegenerateBoundariesZ0();
+  void RegenerateBoundariesZT();
   void RegenerateBoundariesCotanTheta();
   
   inline void RegenerateBoundaries(){RegenerateBoundariesCotanTheta(); RegenerateBoundariesZ0();}
@@ -116,6 +130,7 @@ private:
 
   std::vector<double> ht_bounds_cotantheta_;
   std::vector<double> ht_bounds_z0_;
+  std::vector<double> ht_bounds_zT_;
 };
 
 #endif

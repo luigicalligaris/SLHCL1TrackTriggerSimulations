@@ -55,6 +55,7 @@ struct ProgramOption {
     float       htRZCotanThetaMax    ;
     float       htRZZ0Min            ;
     float       htRZZ0Max            ;
+    float       htRZTRadius          ;
 
     std::string view;
     unsigned    hitBits;
