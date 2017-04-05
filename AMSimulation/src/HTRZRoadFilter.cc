@@ -124,9 +124,7 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
   HTRZAlgorithmConfig algo_config;
   
   
-  if      (po_.htRZMode == "HTRZ_2D_COTANTHETA_Z0")
-    algo_config.mode = HTRZ_2D_COTANTHETA_Z0 ;
-  else if (po_.htRZMode == "HTRZ_2D_COTANTHETA_ZT")
+  if      (po_.htRZMode == "HTRZ_2D_COTANTHETA_ZT")
     algo_config.mode = HTRZ_2D_COTANTHETA_ZT;
   else if (po_.htRZMode == "HTRZ_1D_COTANTHETA")
     algo_config.mode = HTRZ_1D_COTANTHETA;
@@ -142,27 +140,27 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
   
   
 //   algo_config.verbose               =                     1 ;
-//   algo_config.max_z0                =                 +15.0 ;
-//   algo_config.min_z0                =                 -15.0 ;
+//   algo_config.max_zT                =                 +15.0 ;
+//   algo_config.min_zT                =                 -15.0 ;
 //           algo_config.max_cotantheta        =                 +13.5 ;
 //           algo_config.min_cotantheta        =                 -13.5 ;
 //   algo_config.max_cotantheta        =                  +1.5 ;
 //   algo_config.min_cotantheta        =                  -1.0 ;
-//   algo_config.nbins_z0              =                     4 ;
+//   algo_config.nbins_zT              =                     4 ;
 //   algo_config.nbins_cotantheta      =                    16 ;
 //   algo_config.threshold_all_layers  =                     4 ;
 //   algo_config.threshold_ps_layers   =                     1 ;
   
   algo_config.color_output          = IsColorEnabled();
   algo_config.verbose               = po_.verbose               ;
-  algo_config.nbins_z0              = po_.htRZZ0Bins            ;
+  algo_config.nbins_zT              = po_.htRZZTBins            ;
   algo_config.nbins_cotantheta      = po_.htRZCotanThetaBins    ;
   algo_config.threshold_all_layers  = po_.htRZThresholdLayerAll ;
   algo_config.threshold_ps_layers   = po_.htRZThresholdLayerPS  ;
   algo_config.min_cotantheta        = po_.htRZCotanThetaMin     ;
   algo_config.max_cotantheta        = po_.htRZCotanThetaMax     ;
-  algo_config.min_z0                = po_.htRZZ0Min             ;
-  algo_config.max_z0                = po_.htRZZ0Max             ;
+  algo_config.min_zT                = po_.htRZZTMin             ;
+  algo_config.max_zT                = po_.htRZZTMax             ;
   algo_config.t_radius              = po_.htRZTRadius           ;
   
   

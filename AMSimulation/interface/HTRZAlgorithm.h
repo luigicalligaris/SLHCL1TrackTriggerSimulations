@@ -7,7 +7,7 @@
 #include <vector>
 
 // 2D HT matrix or 1D histogram?
-enum HTRZAlgorithm_mode_t {NULL_ALGO, HTRZ_2D_COTANTHETA_Z0, HTRZ_2D_COTANTHETA_ZT, HTRZ_1D_COTANTHETA};
+enum HTRZAlgorithm_mode_t {NULL_ALGO, HTRZ_2D_COTANTHETA_ZT, HTRZ_1D_COTANTHETA};
 enum HTRZAlgorithm_stub_accept_policy_t {LOOSE_ALL_NEIGHBOURS, MEDIUM_NEAR_NEIGHBOUR, TIGHT_NO_NEIGHBOURS};
 
 struct HTRZAlgorithmConfig
@@ -16,12 +16,12 @@ struct HTRZAlgorithmConfig
   HTRZAlgorithm_stub_accept_policy_t stub_accept_policy   ;
   bool                               color_output         ;
   int                                verbose              ;
-  unsigned                           nbins_z0             ;
+  unsigned                           nbins_zT             ;
   unsigned                           nbins_cotantheta     ;
   unsigned                           threshold_all_layers ;
   unsigned                           threshold_ps_layers  ;
-  double                             max_z0               ;
-  double                             min_z0               ;
+  double                             max_zT               ;
+  double                             min_zT               ;
   double                             max_cotantheta       ;
   double                             min_cotantheta       ;
   double                             t_radius             ;
@@ -97,17 +97,6 @@ public:
   slhcl1tt::TTRoad Filter(slhcl1tt::TTRoad const& input_road, slhcl1tt::TTRoadReader const& reader);
 
 private:
-  inline double stub_and_cotantheta_to_z0(double const zstub, double const rstub, double const cotantheta) const noexcept
-  {
-    return zstub - rstub * cotantheta;
-  }
-
-  inline double stub_and_z0_to_cotantheta(double const zstub, double const rstub, double const z0) const noexcept
-  {
-    return (zstub - z0) / rstub;
-  }
-
-
   inline double stub_and_cotantheta_to_zT(double const t_radius, double const zstub, double const rstub, double const cotantheta) const noexcept
   {
     return zstub - (rstub - t_radius) * cotantheta;
@@ -119,17 +108,15 @@ private:
     return (zstub - zT) / (rstub - t_radius);
   }
 
-  void RegenerateBoundariesZ0();
   void RegenerateBoundariesZT();
   void RegenerateBoundariesCotanTheta();
   
-  inline void RegenerateBoundaries(){RegenerateBoundariesCotanTheta(); RegenerateBoundariesZ0();}
+  inline void RegenerateBoundaries(){RegenerateBoundariesCotanTheta(); RegenerateBoundariesZT();}
 
 private:
   HTRZAlgorithmConfig config_;
 
   std::vector<double> ht_bounds_cotantheta_;
-  std::vector<double> ht_bounds_z0_;
   std::vector<double> ht_bounds_zT_;
 };
 

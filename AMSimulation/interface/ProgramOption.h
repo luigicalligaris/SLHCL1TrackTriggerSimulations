@@ -48,13 +48,13 @@ struct ProgramOption {
     std::string htRZMode             ;
     std::string htRZStubAcceptPolicy ;
     unsigned    htRZCotanThetaBins   ;
-    unsigned    htRZZ0Bins           ;
+    unsigned    htRZZTBins           ;
     unsigned    htRZThresholdLayerAll;
     unsigned    htRZThresholdLayerPS ;
     float       htRZCotanThetaMin    ;
     float       htRZCotanThetaMax    ;
-    float       htRZZ0Min            ;
-    float       htRZZ0Max            ;
+    float       htRZZTMin            ;
+    float       htRZZTMax            ;
     float       htRZTRadius          ;
 
     std::string view;
