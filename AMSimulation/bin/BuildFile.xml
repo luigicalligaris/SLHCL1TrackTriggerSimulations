@@ -2,3 +2,9 @@
   <use   name="SLHCL1TrackTriggerSimulations/AMSimulation"/>
   <use   name="boost_program_options"/>
 </bin>
+
+<flags cxxflags="-ggdb">
+  <bin   name="efficiency_calc" file="efficiency_calc.cc">
+    <use   name="SLHCL1TrackTriggerSimulations/AMSimulation"/>
+  </bin>
+</flags>

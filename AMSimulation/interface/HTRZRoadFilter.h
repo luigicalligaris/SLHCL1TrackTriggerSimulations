@@ -13,6 +13,7 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/ModuleOverlapMap.h"
 
 
+namespace slhcl1tt {
 
 class HTRZRoadFilter {
   public:
@@ -45,4 +46,5 @@ class HTRZRoadFilter {
     slhcl1tt::ProgramOption po_;
 };
 
+}
 #endif

@@ -1,5 +1,6 @@
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZRoadFilter.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZAlgorithm.h"
+#include "SLHCL1TrackTriggerSimulations/AMSimulation/interface/HTRZAlgorithmRecorder.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulationIO/interface/TTRoadReader.h"
 #include "SLHCL1TrackTriggerSimulations/AMSimulationIO/interface/Helper.h"
 
@@ -120,14 +121,11 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
 
 
   // Set-up HT algo
-
   HTRZAlgorithmConfig algo_config;
   
   
   if      (po_.htRZMode == "HTRZ_2D_COTANTHETA_ZT")
     algo_config.mode = HTRZ_2D_COTANTHETA_ZT;
-  else if (po_.htRZMode == "HTRZ_1D_COTANTHETA")
-    algo_config.mode = HTRZ_1D_COTANTHETA;
   else // (po_.htRZMode == "NULL_ALGO")
     algo_config.mode = NULL_ALGO;
   
@@ -139,20 +137,9 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
     algo_config.stub_accept_policy = LOOSE_ALL_NEIGHBOURS ;
   
   
-//   algo_config.verbose               =                     1 ;
-//   algo_config.max_zT                =                 +15.0 ;
-//   algo_config.min_zT                =                 -15.0 ;
-//           algo_config.max_cotantheta        =                 +13.5 ;
-//           algo_config.min_cotantheta        =                 -13.5 ;
-//   algo_config.max_cotantheta        =                  +1.5 ;
-//   algo_config.min_cotantheta        =                  -1.0 ;
-//   algo_config.nbins_zT              =                     4 ;
-//   algo_config.nbins_cotantheta      =                    16 ;
-//   algo_config.threshold_all_layers  =                     4 ;
-//   algo_config.threshold_ps_layers   =                     1 ;
-  
   algo_config.color_output          = IsColorEnabled();
   algo_config.verbose               = po_.verbose               ;
+  algo_config.nlayers               = po_.nLayers               ;
   algo_config.nbins_zT              = po_.htRZZTBins            ;
   algo_config.nbins_cotantheta      = po_.htRZCotanThetaBins    ;
   algo_config.threshold_all_layers  = po_.htRZThresholdLayerAll ;
@@ -165,7 +152,10 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
   
   
   HTRZAlgorithm algo(algo_config);
-
+  
+  // Monitoring
+//   HTRZAlgorithmRecorder recorder("playback.root", algo_config);
+  
 
   // Run on the events in tree
   for (long long ievt = 0; ievt < po_.maxEvents; ++ievt)
@@ -179,7 +169,7 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
 
     const unsigned nroads = reader.vr_patternRef->size();
 
-    if (po_.verbose >= 2 && ievt % 100 == 0)
+    if (po_.verbose >= 1 && ievt % 10 == 0)
       std::cout << Debug() << Form("... Processing event: %7lld", ievt) << std::endl;
 
     if (po_.verbose >= 3)
@@ -214,6 +204,8 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
       
       TTRoad out_road = algo.Filter(in_road, reader);
       
+//       recorder.Snapshot(algo, ievt, iroad, in_road.tower, in_road.patternRef);
+      
       if (out_road.nstubs > 0)
       {
         ++nRoadKept;
@@ -224,8 +216,8 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
     if (!out_roads.empty())
     {
       ++nEvtKept;
-      writer.fill(out_roads);
     }
+    writer.fill(out_roads);
   }
   
   
@@ -245,7 +237,7 @@ int HTRZRoadFilter::filterRoads(TString inputfilename, TString outputfilename)
       std::cout << "N/A" << std::endl;
   }
   
-  long long const nentries = writer.writeTree();
+//   long long const nentries = writer.writeTree();
 //   assert(nentries == nEvtRead);
   
   return 0;
