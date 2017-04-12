@@ -48,6 +48,7 @@ int main(int argc, char* argv[])
   using namespace slhcl1tt;
   
   const string inputfilename(argv[1]);
+  const string outputfilename(argv[2]);
   
   const string denomRoadPrefix ("AMTTRoads_");
   const string denomRoadSuffix ("");
@@ -94,17 +95,23 @@ int main(int argc, char* argv[])
   TEfficiency roadeff_pt     ("roadeff_pt"     ,"HT r-z filter efficiency for single roads associated to good post-AM TPs;p_{T};#epsilon",pt_log_binning.size() - 1, pt_log_binning.data());
   TEfficiency roadeff_eta    ("roadeff_eta"    ,"HT r-z filter efficiency for single roads associated to good post-AM TPs;#eta;#epsilon" ,100,-2.5 ,  2.5);
   
-  TH1F        nstubs_denom ("nstubs_denom" ,"Number of stubs per road (denominator);N_{stubs};N_{roads}",15, 0.0, 15.0);
-  TH1F        nstubs_numer ("nstubs_numer" ,"Number of stubs per road (numerator);N_{stubs};N_{roads}"  ,15, 0.0, 15.0);
-  TH1F        fstubs_denom ("fstubs_denom" ,"Fraction of stubs per road (denominator);N_{stubs};f_{roads}",15, 0.0, 15.0);
-  TH1F        fstubs_numer ("fstubs_numer" ,"fraction of stubs per road (numerator);N_{stubs};f_{roads}"  ,15, 0.0, 15.0);
+  TH1F     nstubs_denom       ("nstubs_denom"       ,"Number of stubs per road (denominator);N_{stubs};N_{roads}",15, 0.0, 15.0);
+  TH1F     nstubs_numer       ("nstubs_numer"       ,"Number of stubs per road (numerator);N_{stubs};N_{roads}"  ,15, 0.0, 15.0);
+  TH1F     fstubs_denom       ("fstubs_denom"       ,"Fraction of stubs per road (denominator);N_{stubs};f_{roads}",15, 0.0, 15.0);
+  TH1F     fstubs_numer       ("fstubs_numer"       ,"fraction of stubs per road (numerator);N_{stubs};f_{roads}"  ,15, 0.0, 15.0);
   
-  TH1F        nPSstubs_denom ("nPSstubs_denom" ,"Number of PS stubs per road (denominator);N_{stubs};N_{roads}",15, 0.0, 15.0);
-  TH1F        nPSstubs_numer ("nPSstubs_numer" ,"Number of PS stubs per road (numerator);N_{stubs};N_{roads}"  ,15, 0.0, 15.0);
-  TH1F        fPSstubs_denom ("fPSstubs_denom" ,"Fraction of PS stubs per road (denominator);N_{stubs};f_{roads}",15, 0.0, 15.0);
-  TH1F        fPSstubs_numer ("fPSstubs_numer" ,"fraction of PS stubs per road (numerator);N_{stubs};f_{roads}"  ,15, 0.0, 15.0);
+  TH1F     nPSstubs_denom     ("nPSstubs_denom"     ,"Number of PS stubs per road (denominator);N_{stubs};N_{roads}",15, 0.0, 15.0);
+  TH1F     nPSstubs_numer     ("nPSstubs_numer"     ,"Number of PS stubs per road (numerator);N_{stubs};N_{roads}"  ,15, 0.0, 15.0);
+  TH1F     fPSstubs_denom     ("fPSstubs_denom"     ,"Fraction of PS stubs per road (denominator);N_{stubs};f_{roads}",15, 0.0, 15.0);
+  TH1F     fPSstubs_numer     ("fPSstubs_numer"     ,"fraction of PS stubs per road (numerator);N_{stubs};f_{roads}"  ,15, 0.0, 15.0);
   
-  TProfile roads_per_tp("roads_per_tp", "Average number of roads per TP",2, 0.0, 2.0);
+  TProfile roads_per_tp       ("roads_per_tp"       , "Average number of roads per TP",2, 0.0, 2.0);
+  
+  TProfile n_roads_total      ("n_roads_total"      , "Total number of roads"         ,2, 0.0, 2.0);
+  TProfile n_roads_good       ("n_roads_good"       , "Total number of good roads"    ,2, 0.0, 2.0);
+  TProfile n_roads_nongood    ("n_roads_nongood"    , "Total number of non-good roads",2, 0.0, 2.0);
+  
+  TProfile n_roads_5lay ("n_roads_5lay" , "Total number of roads with stubs in 5 layers or more",2, 0.0, 2.0);
   
   
   
@@ -124,7 +131,7 @@ int main(int argc, char* argv[])
     const size_t nTP         = tpartReader.vp2_pdgId    ->size();
     const size_t nStubs      = tpartReader.vb_tpId      ->size();
 
-    if (verbosity >= 1 && ievt % 10 == 0)
+    if (verbosity >= 1 && ievt % 100 == 0)
       cout << Debug() << Form("... Processing event: %7lld", ievt) << endl;
 
     if (verbosity >= 3)
@@ -397,6 +404,94 @@ int main(int argc, char* argv[])
     }
     
     
+    // Total number of roads
+    unordered_set<size_t> goodDenomRoadsIdxes;
+    for (auto iTP : goodDenomTPIdxes)
+    {
+      for (auto iRoad : tpIdx_2_denomRoadIdxes[iTP])
+      {
+        goodDenomRoadsIdxes.insert(iRoad);
+      }
+    }
+    
+    unordered_set<size_t> goodNumerRoadsIdxes;
+    for (auto iTP : goodNumerTPIdxes)
+    {
+      for (auto iRoad : tpIdx_2_numerRoadIdxes[iTP])
+      {
+        goodNumerRoadsIdxes.insert(iRoad);
+      }
+    }
+    
+    
+    {
+      size_t const nRoadsTotDenom  = denomReader.vp2_charge->size();
+      size_t const nRoadsTotNumer  = numerReader.vp2_charge->size();
+      
+      size_t const nGoodRoadsDenom = goodDenomRoadsIdxes.size();
+      size_t const nGoodRoadsNumer = goodNumerRoadsIdxes.size();
+      
+      size_t const nBadRoadsDenom  = nRoadsTotDenom - nGoodRoadsDenom;
+      size_t const nBadRoadsNumer  = nRoadsTotNumer - nGoodRoadsNumer;
+      
+      n_roads_total  .Fill("pre-filter" , nRoadsTotDenom );
+      n_roads_total  .Fill("post-filter", nRoadsTotNumer );
+      
+      n_roads_good   .Fill("pre-filter" , nGoodRoadsDenom);
+      n_roads_good   .Fill("post-filter", nGoodRoadsNumer);
+      
+      n_roads_nongood.Fill("pre-filter" , nBadRoadsDenom );
+      n_roads_nongood.Fill("post-filter", nBadRoadsNumer );
+    }
+    
+    {
+      long nRoads5LayDenom  = 0.0;
+      for (size_t iRoad = 0; iRoad < denomNRoads; ++iRoad)
+      {
+        unsigned nLayersWithStubs = 0u;
+        
+        unsigned const nLayers = (*(denomReader.vr_stubRefs))[iRoad].size();
+        
+        for (unsigned iLayer = 0; iLayer < nLayers; ++iLayer)
+        {
+          if (! (*(denomReader.vr_stubRefs))[iRoad][iLayer].empty() )
+          {
+            ++nLayersWithStubs;
+          }
+        }
+        
+        if (nLayersWithStubs >= 5)
+          ++nRoads5LayDenom;
+      }
+      
+      n_roads_5lay.Fill("pre-filter" , nRoads5LayDenom);
+      
+      
+      long nRoads5LayNumer  = 0.0;
+      for (size_t iRoad = 0; iRoad < numerNRoads; ++iRoad)
+      {
+        unsigned nLayersWithStubs = 0u;
+        
+        unsigned const nLayers = (*(numerReader.vr_stubRefs))[iRoad].size();
+        
+        for (unsigned iLayer = 0; iLayer < nLayers; ++iLayer)
+        {
+          if (! (*(numerReader.vr_stubRefs))[iRoad][iLayer].empty() )
+          {
+            ++nLayersWithStubs;
+          }
+        }
+        
+        if (nLayersWithStubs >= 5)
+          ++nRoads5LayNumer;
+      }
+      
+      n_roads_5lay.Fill("post-filter", nRoads5LayNumer);
+    }
+    
+    
+    
+    
     
     // Number of all stubs
     for (size_t iRoad = 0; iRoad < denomNRoads; ++iRoad)
@@ -441,7 +536,6 @@ int main(int argc, char* argv[])
       fPSstubs_numer.Fill( nPSStubs );
     }
     
-    
   }
   
   
@@ -455,7 +549,7 @@ int main(int argc, char* argv[])
   
   
   
-  TFile fout("efficiency_htrz.root","RECREATE");
+  TFile fout(outputfilename.c_str(),"RECREATE");
   fout.cd();
   
   tpeff_pt .Write();
@@ -475,6 +569,12 @@ int main(int argc, char* argv[])
   fPSstubs_numer.Write();
   
   roads_per_tp.Write();
+  
+  n_roads_total  .Write();
+  n_roads_good   .Write();
+  n_roads_nongood.Write();
+  
+  n_roads_5lay.Write();
   
   fout.Close();
   
